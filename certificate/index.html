@@ -29,6 +29,23 @@
     font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;}
   .wrap{max-width:1220px; margin:0 auto; padding:26px 20px 90px}
 
+  /* Kagaz suite bar — scoped with kz- so it cannot collide with the
+     Certificate Press styles that already own .mast, .btn, .panel etc. */
+  .kz-mast{display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding-bottom:10px; margin-bottom:16px; border-bottom:1px solid var(--line-strong)}
+  .kz-brand{display:flex; align-items:baseline; gap:8px; text-decoration:none; color:var(--ink);
+    font-size:20px; font-weight:800; letter-spacing:-.02em}
+  .kz-brand .kz-dev{color:var(--blue)}
+  .kz-brand small{font-family:var(--mono); font-size:10px; font-weight:400; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--ink-soft)}
+  .kz-nav{margin-left:auto; display:flex; gap:2px; flex-wrap:wrap}
+  .kz-nav a{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.12em;
+    color:var(--ink-soft); text-decoration:none; padding:8px; border-radius:2px;
+    min-height:44px; display:inline-flex; align-items:center}
+  .kz-nav a:hover{color:var(--blue-deep); background:var(--blue-wash)}
+  .kz-nav a[aria-current]{color:var(--ink); font-weight:700}
+  .kz-sep{width:1px; background:var(--line-strong); margin:10px 6px; align-self:stretch}
+
   .mast{display:flex; align-items:baseline; justify-content:space-between; gap:16px;
     border-bottom:2px solid var(--ink); padding-bottom:14px; margin-bottom:8px; flex-wrap:wrap}
   .mast h1{font-size:26px; font-weight:800; letter-spacing:-.02em; margin:0}
@@ -177,6 +194,22 @@
 </head>
 <body>
 <div class="wrap">
+  <header class="kz-mast">
+    <a class="kz-brand" href="../">
+      <span class="kz-dev">कागज़</span><span>Kagaz</span><small>paper tools</small>
+    </a>
+    <nav class="kz-nav">
+      <a href="../merge-pdf/">Merge</a>
+      <a href="../split-pdf/">Split</a>
+      <a href="../compress-pdf/">Compress</a>
+      <a href="../pdf-to-jpg/">To JPG</a>
+      <a href="../certificate/" aria-current="page">Certificate</a>
+      <span class="kz-sep" aria-hidden="true"></span>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
   <div class="mast">
     <h1>Certificate <span class="mk">Press</span></h1>
     <div class="actions">
@@ -186,16 +219,6 @@
       <input type="file" id="projInput" accept=".json,application/json" hidden>
     </div>
     <div class="tag">batch proof · names &amp; details on your artwork · everything stays in this browser</div>
-    <div class="tag" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:2px">
-      <a href="../" style="color:var(--blue-deep); text-decoration:none">← कागज़ Kagaz</a>
-      <span style="opacity:.4">·</span>
-      <a href="../merge-pdf/" style="color:inherit; text-decoration:none">Merge</a>
-      <a href="../split-pdf/" style="color:inherit; text-decoration:none">Split</a>
-      <a href="../compress-pdf/" style="color:inherit; text-decoration:none">Compress</a>
-      <a href="../pdf-to-jpg/" style="color:inherit; text-decoration:none">To JPG</a>
-      <span style="opacity:.4">·</span>
-      <a href="https://namastevis.in/" style="color:inherit; text-decoration:none">namastevis.in</a>
-    </div>
   </div>
   <div class="sub">Load your artwork PDF → paste your list → place each detail once → download every personalized page as one PDF or a ZIP of individual files.</div>
 
@@ -380,7 +403,7 @@ Rahul Verma	Design for Emerging Tech	13–18 July 2026"></textarea>
     <button class="btn primary" id="genBtn" disabled>Download one PDF</button>
   </div>
 
-  <div class="foot">Made with ❤️ in India · works even when the WiFi doesn’t · <a href="../LICENSE" target="_blank" rel="noopener">MIT licensed</a></div>
+  <div class="foot">Made with ❤️ in India · works even when the WiFi doesn’t · <a href="../LICENSE" target="_blank" rel="noopener">MIT licensed</a> · <a href="https://github.com/namastevis/kagaz">Source</a> · <a href="../contribute/">Contribute</a> · <a href="../">All Kagaz tools</a> · <a href="https://namastevis.in/">Amit Jena</a></div>
 </div>
 
 <div class="modal" id="howModal" role="dialog" aria-label="How Certificate Press works">
