@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contribute to Kagaz</title>
+<meta name="description" content="Kagaz is MIT licensed with no build step — clone it and open a file in your browser. How the code is laid out, what needs building, and how to support it.">
+<link rel="canonical" href="https://kagaz.namastevis.in/contribute/">
+<meta property="og:title" content="Contribute to Kagaz">
+<meta property="og:description" content="No build step, one tool per file, MIT licensed. Here is what needs building.">
+<meta property="og:url" content="https://kagaz.namastevis.in/contribute/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+</head>
+<body>
+<div class="wrap narrow">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../merge-pdf/">Merge</a>
+      <a href="../split-pdf/">Split</a>
+      <a href="../compress-pdf/">Compress</a>
+      <a href="../pdf-to-jpg/">To JPG</a>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="../contribute/" aria-current="page">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">MIT licensed · no build step · no framework</p>
+  <h1>Contribute</h1>
+  <p class="lede">
+    Kagaz is deliberately boring to work on. There is no toolchain, no bundler, no
+    <code>node_modules</code> to install before you can see a change.
+    <b>Clone it, open a file in your browser, and you are developing.</b>
+  </p>
+
+  <section class="prose" style="max-width:none">
+
+    <h2>Getting set up</h2>
+    <pre><code>git clone https://github.com/namastevis/kagaz.git
+cd kagaz
+python3 -m http.server 8000
+# open http://localhost:8000</code></pre>
+    <p>
+      The small web server is only needed because pdf.js loads its worker as a separate file,
+      which browsers block on <code>file://</code>. Any static server will do.
+    </p>
+
+    <h2>How the code is laid out</h2>
+    <pre><code>index.html            the landing page
+merge-pdf/index.html  one tool, one self-contained file
+split-pdf/index.html
+compress-pdf/index.html
+pdf-to-jpg/index.html
+certificate/index.html
+shared/kagaz.css      every page shares this stylesheet
+shared/kagaz.js       browser helpers: drop zones, downloads, canvas, messages
+shared/ops.js         the PDF logic — deliberately DOM-free
+vendor/               pdf-lib, pdf.js, JSZip, fontkit — vendored, never a CDN
+tests/stress.mjs      throws deliberately broken PDFs at shared/ops.js</code></pre>
+
+    <p>Three rules keep it that way, and they are the only ones:</p>
+    <ol>
+      <li><b>One tool is one HTML file.</b> Markup, styles specific to it, and its logic all live together. You should be able to understand a tool without opening anything else.</li>
+      <li><b>Nothing may be fetched from another origin.</b> No CDN, no font service, no analytics. The entire premise of Kagaz is that opening it makes no network requests, and a contributor adding a Google Font would quietly break that.</li>
+      <li><b>PDF logic goes in <code>shared/ops.js</code>, not in the page.</b> That file has no DOM references, so it runs in Node and can be tested. Anything needing a canvas is passed in as an argument.</li>
+    </ol>
+
+    <h2>Adding a new tool</h2>
+    <ol>
+      <li>Copy <code>merge-pdf/index.html</code> to <code>your-tool/index.html</code>. It is the simplest of the four.</li>
+      <li>Change the title, description, canonical URL and the copy below the fold. The slug should be what a person would actually type into a search box — <code>rotate-pdf</code>, not <code>rotator</code>.</li>
+      <li>Put the actual PDF manipulation in <code>shared/ops.js</code> as a function that takes bytes and returns bytes.</li>
+      <li>Add a card to the grid on the landing page and a link in every tool's footer list.</li>
+      <li>Add a case to <code>tests/stress.mjs</code>.</li>
+    </ol>
+
+    <h2>Things worth building</h2>
+    <p>Roughly in order of how useful they would be, with the easiest first.</p>
+
+    <h3>Good first issues</h3>
+    <ul>
+      <li><b>JPG to PDF</b> — the obvious missing counterpart to PDF to JPG. <code>pdf-lib</code>'s <code>embedJpg</code> does the hard part. Needs page-size options and ordering.</li>
+      <li><b>Rotate and reorder pages</b> — a thumbnail grid with rotate and drag. The PDF side is two lines; the interface is the work.</li>
+      <li><b>Add page numbers</b> — position, starting number, font size, skip-first-page.</li>
+      <li><b>Add a watermark</b> — text or image, opacity, angle, every page or a range.</li>
+      <li><b>Dark mode</b> — the palette is all CSS custom properties at the top of <code>shared/kagaz.css</code>, so this is mostly a <code>prefers-color-scheme</code> block.</li>
+      <li><b>Hindi, Odia, Tamil, Bengali interface strings</b> — the labels are plain text in the HTML. A translation is a genuinely valuable contribution and needs no JavaScript at all.</li>
+    </ul>
+
+    <h3>Harder, and more interesting</h3>
+    <ul>
+      <li><b>More image formats in the compressor.</b> It currently skips CMYK, JPEG 2000, JBIG2, CCITT fax and indexed-colour images rather than risk corrupting them. Each one you can decode safely is a real improvement to a real tool. Start with CCITT fax — it is what most document scanners produce.</li>
+      <li><b>Downsample soft masks.</b> Transparency masks are separate greyscale images and are often large. They can be re-deflated with <code>CompressionStream</code>, which browsers now have.</li>
+      <li><b>True redaction.</b> Draw a box, and actually remove the text and image data underneath rather than covering it. Most free tools draw a black rectangle over selectable text, which is a genuine safety bug people have been burned by.</li>
+      <li><b>Offline install.</b> A service worker to make Kagaz a proper installable PWA that survives having no network at all.</li>
+      <li><b>Use the content stream to size images.</b> The compressor currently caps images against the page size. Reading the actual transformation matrix would let it downsample far more precisely.</li>
+    </ul>
+
+    <h3>Please don't</h3>
+    <ul>
+      <li>Add a framework, a bundler, or a package manager step.</li>
+      <li>Add analytics, error reporting, or anything that phones home. Yes, even the privacy-respecting kind.</li>
+      <li>Add PDF to Word. It cannot be done well in a browser, and shipping a bad version would undermine the one thing this site is for.</li>
+      <li>Add a feature that silently degrades a file. If a document cannot be processed safely, Kagaz says so.</li>
+    </ul>
+
+    <h2>Running the tests</h2>
+    <pre><code>node tests/stress.mjs</code></pre>
+    <p>
+      This throws deliberately awful PDFs at <code>shared/ops.js</code> — zero-byte files, truncated
+      files, a JPEG renamed to <code>.pdf</code>, encrypted documents, a two-thousand-page monster,
+      pages of impossible sizes — and checks that each one fails cleanly with a message a human
+      could act on, rather than crashing or producing a broken file.
+    </p>
+    <p>
+      There is also <a href="../test/">an in-browser test page</a> that runs the same battery
+      against the real browser code, including the image compression that Node cannot exercise.
+      Open it after any change.
+    </p>
+
+  </section>
+
+  <section class="chai">
+    <h3>Buy me a chai</h3>
+    <p>
+      Kagaz has no server, so it costs me almost nothing to run — a domain renewal and the
+      evenings that go into it. It is free, unlimited and ad-free, and it will stay that way
+      whether or not anyone sends me anything.
+    </p>
+    <p>
+      If it saved you an evening of fighting with a website that wanted your bank statement
+      uploaded to it, a chai is a nice thing to do.
+    </p>
+    <div class="ways">
+      <a href="https://razorpay.me/@namastevis" rel="noopener">₹ Send a chai via Razorpay</a>
+      <a href="https://github.com/namastevis/kagaz" rel="noopener">★ Star it on GitHub</a>
+      <a href="https://github.com/namastevis/kagaz/issues" rel="noopener">Report a bug</a>
+    </div>
+    <p class="hint" style="margin-top:12px">
+      That Razorpay link is the only outbound link on this site that leads anywhere commercial,
+      and nothing loads from it unless you click. No payment script runs on these pages.
+    </p>
+  </section>
+
+  <section class="who">
+    <h2>Who made this</h2>
+    <p>
+      I'm <b>Amit Jena</b> — mathematics and computer science by training, design by accident.
+      I build things that turn data and documents into something a person can use. Kagaz is the
+      documents half; the rest lives next door.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">namastevis.in</a>
+      <a href="https://github.com/namastevis">GitHub</a>
+      <a href="https://linkedin.com/in/namastevis">LinkedIn</a>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../">All tools</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> Amit Jena · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+<script src="../shared/kagaz.js"></script>
+</body>
+</html>

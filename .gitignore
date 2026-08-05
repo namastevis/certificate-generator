@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+._*
+
+# Optional test dependency — `sharp` enables the real-pixel compression tests,
+# but the suite runs fine without it.
+node_modules/
+package-lock.json

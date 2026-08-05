@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compress PDF without uploading — Kagaz</title>
+<meta name="description" content="Shrink a PDF in your browser by downsampling the images inside it while leaving text as text. Nothing is uploaded, and you are told exactly what changed.">
+<link rel="canonical" href="https://kagaz.namastevis.in/compress-pdf/">
+<meta property="og:title" content="Compress PDF without uploading — Kagaz">
+<meta property="og:description" content="Shrink a PDF in your browser. Images get smaller, text stays text.">
+<meta property="og:url" content="https://kagaz.namastevis.in/compress-pdf/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Does compressing a PDF here make the text unselectable?","acceptedAnswer":{"@type":"Answer","text":"Not in the default mode. Kagaz replaces only the images inside the PDF and leaves text, vector graphics and links untouched, so text stays selectable and searchable. The optional flatten mode does turn pages into pictures, and warns you before it does."}},
+{"@type":"Question","name":"Is my PDF uploaded to be compressed?","acceptedAnswer":{"@type":"Answer","text":"No. The compression runs in your browser. Kagaz has no server and no upload endpoint."}},
+{"@type":"Question","name":"Why did my file barely shrink?","acceptedAnswer":{"@type":"Answer","text":"Because most of its size probably is not images. A PDF full of text and vector graphics is already close to as small as it gets. Kagaz shows you a breakdown of every image it found, what it changed, and what it deliberately left alone."}}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../merge-pdf/">Merge</a>
+      <a href="../split-pdf/">Split</a>
+      <a href="../compress-pdf/" aria-current="page">Compress</a>
+      <a href="../pdf-to-jpg/">To JPG</a>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Compress · nothing uploaded</p>
+  <h1>Compress PDF</h1>
+  <p class="lede">
+    Shrinks the images inside your PDF and <b>leaves the text as text</b>. Most free compressors
+    quietly flatten every page into a picture, which is why your document comes back
+    unsearchable and slightly fuzzy. This one shows you exactly what it changed.
+  </p>
+
+  <section class="panel" id="panelFile">
+    <div class="head"><span class="step">1</span><h2>Your PDF</h2><span class="note" id="fileNote">no file yet</span></div>
+    <div class="body">
+      <div class="drop" id="drop">
+        <span class="big">Drop a PDF here</span>
+        <span class="small">or tap to choose · one file at a time</span>
+      </div>
+      <ul class="filelist" id="list"></ul>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelOpts" hidden>
+    <div class="head"><span class="step">2</span><h2>How hard to squeeze</h2><span class="note" id="modeNote"></span></div>
+    <div class="body stack">
+      <div>
+        <span class="fldlabel">Method</span>
+        <div class="seg" id="modes" role="group" aria-label="Compression method">
+          <button type="button" data-mode="images" aria-pressed="true">shrink images</button>
+          <button type="button" data-mode="structural" aria-pressed="false">lossless only</button>
+          <button type="button" data-mode="raster" aria-pressed="false">flatten pages</button>
+        </div>
+      </div>
+
+      <div id="modeExplain" class="callout info"></div>
+
+      <div id="imgOpts">
+        <div class="row">
+          <div>
+            <span class="fldlabel">Image detail</span>
+            <div class="seg" id="dpis" role="group" aria-label="Image resolution">
+              <button type="button" data-dpi="96" aria-pressed="false">screen · 96</button>
+              <button type="button" data-dpi="150" aria-pressed="true">ebook · 150</button>
+              <button type="button" data-dpi="220" aria-pressed="false">print · 220</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <label class="fld" for="quality">JPEG quality — <span id="qVal">72</span>%</label>
+          <input type="range" id="quality" min="40" max="95" value="72" step="1">
+          <p class="hint">Lower is smaller. Below about 60% you start to see it on photographs.</p>
+        </div>
+      </div>
+
+      <div id="planMsg"></div>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">Add a PDF</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Compress</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+  <div id="result"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p>
+      Compressed on your own machine — the file never left it. Kagaz is free and open source,
+      built by <b>Amit Jena</b> in India.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+      <a href="../">More Kagaz tools</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>What actually makes a PDF big</h2>
+    <p>
+      Almost always, images. A page of text is a few kilobytes; a photograph someone pasted in
+      from a phone is four megabytes, and it is sitting in there at full camera resolution even
+      though it is printed two inches wide. Scanned documents are the same story — every page is
+      a photograph of a page.
+    </p>
+    <p>
+      So the honest way to compress a PDF is to find those images, shrink them to a resolution
+      that actually matters at the size they are displayed, re-encode them, and put them back —
+      leaving everything else alone. That is what <b>shrink images</b> does here.
+    </p>
+
+    <h2>The three methods</h2>
+    <h3>Shrink images — the default</h3>
+    <p>
+      Walks through every image embedded in the document, downsamples anything larger than your
+      chosen detail level, re-encodes it as a JPEG, and swaps it back in place. Text stays text.
+      Vector graphics stay sharp. Links and bookmarks survive. Typical savings on an image-heavy
+      document are 50–90%.
+    </p>
+    <h3>Lossless only</h3>
+    <p>
+      Rewrites the file's internal structure — packs objects more efficiently, drops orphaned
+      data, strips editing metadata and page thumbnails. Nothing is re-encoded, so nothing can
+      degrade. The saving is modest, usually 5–20%, and sometimes almost nothing. Use it when
+      the document must be preserved byte-for-byte in appearance.
+    </p>
+    <h3>Flatten pages</h3>
+    <p>
+      Renders every page to a JPEG and builds a new PDF out of those pictures. This gives the
+      largest reduction and is the right choice for a scanned document that is already nothing
+      but images. <b>It also destroys text:</b> you will not be able to select, search or copy
+      anything afterwards, and screen readers will find an empty document. Kagaz asks before
+      doing this. Most other tools do it silently and call it "compression".
+    </p>
+
+    <h2>What gets left alone, and why</h2>
+    <p>
+      Some images cannot be safely re-encoded in a browser, and Kagaz would rather skip them than
+      corrupt your file to make a number look better. It reports each one:
+    </p>
+    <ul>
+      <li><b>CMYK images</b> — browsers decode these unreliably, and getting it wrong shifts every colour on a print job.</li>
+      <li><b>JPEG 2000, JBIG2, CCITT fax</b> — the formats scanners produce. Decoding them correctly is a project in itself.</li>
+      <li><b>Indexed and spot-colour images</b> — converting these to plain RGB would change how they render.</li>
+      <li><b>Images already small enough</b> — no point re-encoding something that is already efficient.</li>
+      <li><b>Anything where re-encoding did not actually save space</b> — the original is kept.</li>
+    </ul>
+    <p>
+      Supporting more of these is exactly the kind of contribution the project wants. They are
+      written up on the <a href="../contribute/">contribute page</a>.
+    </p>
+
+    <h2>Common questions</h2>
+    <h3>Is my file uploaded?</h3>
+    <p>No. There is no server. Watch the Network tab in your developer tools if you would like to confirm it.</p>
+    <h3>Why did nothing happen to my file?</h3>
+    <p>Most likely it contains no images, or the images are in one of the formats listed above. The report after each run tells you which.</p>
+    <h3>Can I run it twice to shrink it further?</h3>
+    <p>You can, but you mostly should not. Re-encoding a JPEG that has already been re-encoded adds visible damage without saving much. Lower the quality slider instead.</p>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../merge-pdf/">Merge PDF</a> — join files into one</li>
+      <li><a href="../split-pdf/">Split PDF</a> — extract or break apart</li>
+      <li><a href="../pdf-to-jpg/">PDF to JPG</a> — pages as images at any resolution</li>
+      <li><a href="../certificate/">Certificate Press</a> — one design, many names</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../contribute/">Contribute</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../vendor/pdf.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+  var current = null, mode = 'images', dpi = 150;
+
+  var EXPLAIN = {
+    images: 'Shrinks the images inside the document and leaves everything else alone. Text stays selectable and searchable.',
+    structural: 'Rewrites the file structure and strips editing leftovers. Nothing is re-encoded, so nothing can degrade — but the saving is usually small.',
+    raster: 'Turns every page into a picture. Biggest saving, but the text stops being text: no selecting, no searching, no screen readers. Only sensible for scans.'
+  };
+
+  var listEl = K.$('#list'), noteEl = K.$('#fileNote'), modeNote = K.$('#modeNote');
+  var countEl = K.$('#count'), goBtn = K.$('#go'), clearBtn = K.$('#clear');
+  var progEl = K.$('#prog'), msgEl = K.$('#msg'), fileMsgEl = K.$('#fileMsg');
+  var planMsgEl = K.$('#planMsg'), resultEl = K.$('#result'), optsPanel = K.$('#panelOpts');
+
+  K.dropzone(K.$('#drop'), {
+    accept: '.pdf,application/pdf',
+    match: K.isPdf,
+    onFiles: function (added) { open(added[0]); }
+  });
+
+  async function open(file) {
+    K.say(fileMsgEl, 'info', 'Reading “' + file.name + '”…');
+    try {
+      var bytes = await K.read(file);
+      var info = await ops.describe(bytes, file.name);
+      current = { name: file.name, size: file.size, bytes: bytes, pages: info.pages, images: info.images };
+      var warn = K.sizeWarning(file.size);
+      if (warn) K.say(fileMsgEl, 'warn', warn);
+      else if (info.images === 0) {
+        K.say(fileMsgEl, 'info', 'This document contains no embedded images, so there is very little for “shrink images” to do. Try lossless only — or accept that it is already about as small as it gets.');
+      } else K.say(fileMsgEl, '', null);
+    } catch (err) {
+      current = null;
+      K.say(fileMsgEl, 'err', K.humanError(err));
+    }
+    render();
+  }
+
+  K.$$('#modes button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      mode = b.getAttribute('data-mode');
+      K.$$('#modes button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      K.$('#imgOpts').hidden = mode === 'structural';
+      K.$('#modeExplain').textContent = EXPLAIN[mode];
+      updateWarnings();
+      updateCount();
+    });
+  });
+
+  K.$$('#dpis button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      dpi = parseInt(b.getAttribute('data-dpi'), 10);
+      K.$$('#dpis button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      updateCount();
+    });
+  });
+
+  K.$('#quality').addEventListener('input', function () { K.$('#qVal').textContent = this.value; });
+
+  function updateWarnings() {
+    if (mode === 'raster') {
+      K.say(planMsgEl, 'warn',
+        'Flatten will make the text in this document permanently unselectable and unsearchable. ' +
+        'Keep your original. If the document is a scan it was never selectable anyway, so this is a good choice.');
+    } else K.say(planMsgEl, '', null);
+  }
+
+  function updateCount() {
+    if (!current) { countEl.textContent = 'Add a PDF'; modeNote.textContent = ''; return; }
+    countEl.innerHTML = '<b>' + K.bytes(current.size) + '</b> · ' + current.pages + ' pages · ' + current.images + ' images';
+    modeNote.textContent = mode === 'structural' ? 'lossless' : (mode === 'raster' ? 'flatten · ' + dpi + ' dpi' : dpi + ' dpi');
+  }
+
+  function render() {
+    listEl.innerHTML = '';
+    if (current) {
+      var li = K.el('li', { class: 'fileitem' });
+      li.appendChild(K.el('span', { class: 'idx', text: '1' }));
+      var meta = K.el('div', { class: 'meta' });
+      meta.appendChild(K.el('div', { class: 'nm', text: current.name, title: current.name }));
+      meta.appendChild(K.el('div', { class: 'sz', text: K.bytes(current.size) + ' · ' + current.pages + ' pages · ' + current.images + ' images' }));
+      li.appendChild(meta);
+      var ctl = K.el('div', { class: 'ctl' });
+      ctl.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Remove', 'aria-label': 'Remove file',
+        onclick: function () { current = null; render(); }, text: '×'
+      }));
+      li.appendChild(ctl);
+      listEl.appendChild(li);
+      noteEl.textContent = K.bytes(current.size) + ' · ' + current.images + ' images';
+    } else {
+      noteEl.textContent = 'no file yet';
+    }
+    optsPanel.hidden = !current;
+    clearBtn.disabled = !current;
+    goBtn.disabled = !current;
+    K.$('#panelFile').classList.toggle('done', !!current);
+    K.$('#modeExplain').textContent = EXPLAIN[mode];
+    updateWarnings();
+    updateCount();
+  }
+
+  clearBtn.addEventListener('click', function () {
+    current = null;
+    resultEl.innerHTML = '';
+    K.say(msgEl, '', null); K.say(fileMsgEl, '', null);
+    render();
+  });
+
+  goBtn.addEventListener('click', async function () {
+    if (!current) return;
+    if (mode === 'raster' && !window.confirm(
+      'Flattening turns every page into a picture.\n\n' +
+      'The text in this PDF will no longer be selectable, searchable or readable by screen readers. ' +
+      'This cannot be undone — keep your original.\n\nGo ahead?')) return;
+
+    goBtn.disabled = true; clearBtn.disabled = true;
+    resultEl.innerHTML = '';
+    var bar = K.progress(progEl);
+    var quality = parseInt(K.$('#quality').value, 10) / 100;
+
+    try {
+      var out;
+      if (mode === 'raster') {
+        out = await runRaster(bar, quality);
+      } else {
+        K.say(msgEl, 'info', mode === 'images' ? 'Reworking images…' : 'Rewriting the file…');
+        out = await ops.compress(current.bytes, {
+          mode: mode, dpi: dpi, quality: quality, name: current.name,
+          onProgress: function (frac, label) {
+            bar.set(frac * 0.95);
+            if (label) K.say(msgEl, 'info', 'Working — ' + label + '…');
+          }
+        }, K.codec);
+      }
+
+      bar.set(1);
+      var saved = K.pct(out.before, out.after);
+      var name = current.name.replace(/\.pdf$/i, '') + '_compressed.pdf';
+
+      if (out.after >= out.before) {
+        K.say(msgEl, 'warn',
+          'Compression did not help — the result came out no smaller than the original (' +
+          K.bytes(out.before) + '). Your original file is already efficient. Nothing has been downloaded.');
+        showResult(out, saved, false);
+      } else {
+        K.say(msgEl, 'good', 'Down to ' + K.bytes(out.after) + ' from ' + K.bytes(out.before) + ' — ' + saved + '% smaller.');
+        showResult(out, saved, true);
+        K.download(out.bytes, name);
+      }
+
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      goBtn.disabled = false; clearBtn.disabled = false;
+    }
+  });
+
+  async function runRaster(bar, quality) {
+    K.say(msgEl, 'info', 'Opening the document…');
+    var pdfjsLib = K.pdfjs();
+    var doc = await pdfjsLib.getDocument({ data: current.bytes.slice(0) }).promise;
+
+    var result = await ops.rasterize(current.bytes, {
+      name: current.name,
+      onProgress: function (frac, label) {
+        bar.set(frac * 0.95);
+        K.say(msgEl, 'info', 'Flattening — ' + label + '…');
+      }
+    }, async function (index) {
+      var page = await doc.getPage(index + 1);
+      var canvas = await K.renderPage(page, dpi);
+      var w = canvas.width, h = canvas.height;
+      var enc = await K.canvasToBytes(canvas, 'image/jpeg', quality);
+      canvas.width = canvas.height = 0;   // release the bitmap before the next page
+      page.cleanup();
+      await K.tick();
+      if (!enc) throw new Error('The browser could not encode page ' + (index + 1) + '.');
+      return { data: enc.bytes, width: w, height: h };
+    });
+
+    doc.destroy();
+    result.stats = { mode: 'raster', images: 0, changed: 0, skipped: [], changes: [] };
+    return result;
+  }
+
+  function showResult(out, saved, didDownload) {
+    var box = K.el('div', { class: 'result' });
+    var figs = K.el('div', { class: 'figures' });
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b>' + K.bytes(out.before) + '</b>before' }));
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b>' + K.bytes(out.after) + '</b>after' }));
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b class="' + (saved > 0 ? 'win' : '') + '">' + saved + '%</b>smaller' }));
+    box.appendChild(figs);
+
+    var s = out.stats || {};
+    if (s.mode === 'raster') {
+      box.appendChild(K.el('p', { class: 'hint', text: 'Every page was replaced with a ' + dpi + ' dpi image. The text is no longer selectable.' }));
+    } else if (s.mode === 'images') {
+      box.appendChild(K.el('p', {
+        class: 'hint',
+        text: s.changed + ' of ' + s.images + ' images reworked' +
+              (s.maxEdge ? ' · capped at ' + s.maxEdge + ' px on the long edge' : '') +
+              ' · text left untouched'
+      }));
+
+      if (s.changes && s.changes.length) {
+        var t1 = K.el('table', { class: 'report' });
+        t1.appendChild(K.el('tr', {}, [K.el('th', { text: 'Image' }), K.el('th', { text: 'Now' }), K.el('th', { text: 'Saved' })]));
+        s.changes.slice(0, 10).forEach(function (c) {
+          t1.appendChild(K.el('tr', {}, [
+            K.el('td', { text: c.from }), K.el('td', { text: c.to }), K.el('td', { text: K.bytes(c.saved) })
+          ]));
+        });
+        if (s.changes.length > 10) t1.appendChild(K.el('tr', {}, [K.el('td', { colspan: '3', text: '…and ' + (s.changes.length - 10) + ' more' })]));
+        box.appendChild(t1);
+      }
+
+      if (s.skipped && s.skipped.length) {
+        var counts = {};
+        s.skipped.forEach(function (k) { counts[k.reason] = (counts[k.reason] || 0) + 1; });
+        var items = Object.keys(counts).map(function (r) { return counts[r] + ' × ' + r; });
+        box.appendChild(K.el('p', { class: 'hint', html: '<b>Left alone deliberately:</b> ' + items.join(' · ') + '.' }));
+      }
+    } else {
+      box.appendChild(K.el('p', { class: 'hint', text: 'Structure rewritten losslessly. No image was re-encoded, so nothing has degraded.' }));
+    }
+
+    if (didDownload && s.mode === 'images' && saved < 5) {
+      box.appendChild(K.el('p', {
+        class: 'hint',
+        text: 'Only a small saving — this document\'s size is mostly not images. That is usually a sign it is already efficient.'
+      }));
+    }
+
+    resultEl.appendChild(box);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

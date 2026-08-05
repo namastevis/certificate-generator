@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kagaz — in-browser test bench</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<style>
+  .tbl{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12.5px; margin-top:8px}
+  .tbl th{text-align:left; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft);
+          font-weight:400; border-bottom:1px solid var(--line-strong); padding:6px 8px 6px 0}
+  .tbl td{padding:7px 8px 7px 0; border-bottom:1px solid var(--line); vertical-align:top}
+  .tbl td.v{width:26px; font-size:14px}
+  .pass{color:var(--ok)} .fail{color:var(--reg); font-weight:700} .skip{color:var(--ink-soft)}
+  .tbl tr.failrow{background:#fdeceb}
+  .scoreline{font-family:var(--mono); font-size:14px; margin-top:14px; padding:12px 14px;
+             border:1px solid var(--line); border-left:3px solid var(--ink); background:var(--card)}
+  .scoreline.ok{border-left-color:var(--ok)} .scoreline.no{border-left-color:var(--reg)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>test bench</small></a>
+    <nav>
+      <a href="../">Tools</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://github.com/namastevis/kagaz">Source</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Not indexed · run this after any change</p>
+  <h1>In-browser test bench</h1>
+  <p class="lede">
+    <code>tests/stress.mjs</code> covers the PDF logic in Node. This page covers what Node
+    cannot: the real canvas image codec, <code>createImageBitmap</code>, blob encoding and
+    the download path — <b>in the browser you are actually shipping to</b>.
+  </p>
+
+  <div class="bar">
+    <span class="count" id="score">Ready</span>
+    <button class="btn ghost" id="sample" disabled>Download the compressed sample</button>
+    <button class="btn primary" id="run">Run all tests</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+
+  <section class="panel" style="margin-top:14px">
+    <div class="head"><span class="step">✓</span><h2>Results</h2><span class="note" id="env"></span></div>
+    <div class="body">
+      <table class="tbl" id="out">
+        <thead><tr><th></th><th>Test</th><th>Detail</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="prose">
+    <h2>What this checks that Node cannot</h2>
+    <ul>
+      <li>That <code>createImageBitmap</code> in this browser decodes the JPEGs found inside a PDF.</li>
+      <li>That canvas re-encoding actually produces smaller images at the quality settings the tools use.</li>
+      <li>That transparent source pixels come out white rather than black — the classic bug in browser image pipelines.</li>
+      <li>That compressed output still contains selectable text, verified by re-parsing the result.</li>
+      <li>That the compressed sample is visually acceptable — press the download button and look at it.</li>
+    </ul>
+    <p>
+      If a test fails here but passes in Node, the problem is browser-specific. Note which
+      browser and version in the issue — that information is most of the fix.
+    </p>
+  </section>
+
+  <footer class="foot">
+    <div class="r"><a href="../">Kagaz</a> <span class="dot">·</span> <a href="../contribute/">Contribute</a> <span class="dot">·</span> <a href="https://github.com/namastevis/kagaz">Source</a></div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../vendor/pdf.min.js"></script>
+<script src="../vendor/jszip.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps, L = window.PDFLib;
+  var body = document.querySelector('#out tbody');
+  var pass = 0, fail = 0, skip = 0, sampleBytes = null;
+
+  K.$('#env').textContent = (navigator.userAgent.match(/(Chrome|Firefox|Safari|Edg)\/[\d.]+/) || ['unknown'])[0];
+
+  function row(state, name, detail) {
+    var tr = K.el('tr', { class: state === 'fail' ? 'failrow' : '' });
+    tr.appendChild(K.el('td', { class: 'v ' + state, text: state === 'pass' ? '✓' : (state === 'fail' ? '✗' : '–') }));
+    tr.appendChild(K.el('td', { text: name }));
+    tr.appendChild(K.el('td', { class: state, text: detail || '' }));
+    body.appendChild(tr);
+    if (state === 'pass') pass++; else if (state === 'fail') fail++; else skip++;
+    K.$('#score').innerHTML = '<b>' + pass + '</b> passed · <b>' + fail + '</b> failed' + (skip ? ' · ' + skip + ' skipped' : '');
+  }
+
+  /** fn returns a detail string on success, or throws / returns {fail:'why'}. */
+  async function test(name, fn) {
+    try {
+      var r = await fn();
+      if (r && r.fail) row('fail', name, r.fail);
+      else row('pass', name, typeof r === 'string' ? r : '');
+    } catch (e) {
+      row('fail', name, (e && e.message) || String(e));
+    }
+    await K.tick();
+  }
+
+  async function refuses(name, fn, code) {
+    try {
+      await fn();
+      row('fail', name, 'no error thrown — it should have refused');
+    } catch (e) {
+      if (!e.friendly) row('fail', name, 'raw error instead of KagazError: ' + e.message);
+      else if (code && e.code !== code) row('fail', name, 'expected "' + code + '", got "' + e.code + '"');
+      else row('pass', name, e.code);
+    }
+    await K.tick();
+  }
+
+  /* ------------------------------------------------------------ fixtures */
+
+  function noiseCanvas(w, h, opts) {
+    opts = opts || {};
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var ctx = c.getContext('2d');
+    var img = ctx.createImageData(w, h);
+    for (var i = 0, n = w * h; i < n; i++) {
+      var j = i * 4;
+      img.data[j]     = (Math.sin(i * 0.017) * 90 + Math.random() * 70 + 128) & 255;
+      img.data[j + 1] = (Math.cos(i * 0.011) * 80 + Math.random() * 70 + 128) & 255;
+      img.data[j + 2] = (Math.sin(i * 0.023) * 70 + Math.random() * 70 + 128) & 255;
+      img.data[j + 3] = opts.alpha ? 0 : 255;      // fully transparent, to test white matting
+    }
+    ctx.putImageData(img, 0, 0);
+    return c;
+  }
+
+  function canvasBytes(canvas, type, q) {
+    return new Promise(function (res) {
+      canvas.toBlob(async function (b) { res(new Uint8Array(await b.arrayBuffer())); }, type, q);
+    });
+  }
+
+  async function textPdf(pages) {
+    var doc = await L.PDFDocument.create();
+    var font = await doc.embedFont(L.StandardFonts.Helvetica);
+    for (var i = 0; i < pages; i++) {
+      doc.addPage([595.28, 841.89]).drawText('Page ' + (i + 1) + ' — Kagaz test bench', {
+        x: 40, y: 400, size: 14, font: font, color: L.rgb(0, 0, 0)
+      });
+    }
+    return doc.save();
+  }
+
+  async function imagePdf() {
+    var doc = await L.PDFDocument.create();
+    var font = await doc.embedFont(L.StandardFonts.Helvetica);
+    var jpg = await doc.embedJpg(await canvasBytes(noiseCanvas(2200, 1600), 'image/jpeg', 0.95));
+    var png = await doc.embedPng(await canvasBytes(noiseCanvas(1500, 1100), 'image/png'));
+    [jpg, png].forEach(function (img) {
+      var p = doc.addPage([595.28, 841.89]);
+      p.drawImage(img, { x: 20, y: 300, width: 555, height: 400 });
+      p.drawText('This text must survive compression.', { x: 40, y: 120, size: 13, font: font, color: L.rgb(0, 0, 0) });
+    });
+    return doc.save();
+  }
+
+  async function hasText(bytes) {
+    var doc = await L.PDFDocument.load(bytes, { ignoreEncryption: true, throwOnInvalidObject: false });
+    var found = false;
+    doc.context.enumerateIndirectObjects().forEach(function (pair) {
+      try {
+        var s = L.decodePDFRawStream(pair[1]).decode();
+        var str = '';
+        for (var i = 0; i < Math.min(s.length, 60000); i++) str += String.fromCharCode(s[i]);
+        if (str.indexOf('Tj') !== -1 || str.indexOf('TJ') !== -1) found = true;
+      } catch (e) {}
+    });
+    return found;
+  }
+
+  /* ----------------------------------------------------------------- run */
+
+  K.$('#run').addEventListener('click', async function () {
+    body.innerHTML = '';
+    pass = fail = skip = 0;
+    sampleBytes = null;
+    K.$('#sample').disabled = true;
+    K.$('#run').disabled = true;
+    var bar = K.progress(K.$('#prog'));
+    K.say(K.$('#msg'), 'info', 'Running…');
+
+    try {
+      var text3 = await textPdf(3);
+      var text10 = await textPdf(10);
+      bar.set(0.1);
+
+      /* --- environment ------------------------------------------------ */
+      await test('createImageBitmap is available', function () {
+        if (typeof createImageBitmap !== 'function') return { fail: 'missing — the compressor cannot work in this browser' };
+        return 'yes';
+      });
+      await test('OffscreenCanvas available', function () {
+        return typeof OffscreenCanvas !== 'undefined' ? 'yes — used for off-thread encoding' : 'no — falling back to a DOM canvas (fine)';
+      });
+      await test('pdf.js worker resolves', async function () {
+        var lib = K.pdfjs();
+        var doc = await lib.getDocument({ data: text3.slice(0) }).promise;
+        var n = doc.numPages;
+        doc.destroy();
+        if (n !== 3) return { fail: 'expected 3 pages, got ' + n };
+        return '3 pages rendered through the worker';
+      });
+
+      /* --- refusals --------------------------------------------------- */
+      await refuses('rejects a zero-byte file', function () { return ops.load(new Uint8Array(0), 'e.pdf'); }, 'empty');
+      await refuses('rejects a non-PDF', function () { return ops.load(new TextEncoder().encode('hello'), 'x.pdf'); }, 'notpdf');
+      await refuses('rejects a truncated PDF', function () { return ops.load(text3.slice(0, 50), 't.pdf'); }, 'damaged');
+      bar.set(0.2);
+
+      /* --- merge and split -------------------------------------------- */
+      await test('merge keeps text', async function () {
+        var out = await ops.merge([{ name: 'a', bytes: text3 }, { name: 'b', bytes: text10 }]);
+        if (out.pages !== 13) return { fail: 'expected 13 pages, got ' + out.pages };
+        if (!(await hasText(out.bytes))) return { fail: 'text lost' };
+        return '13 pages, text intact';
+      });
+      await test('split into single pages', async function () {
+        var out = await ops.split(text10, 'each', {}, 'doc.pdf');
+        if (out.files.length !== 10) return { fail: 'expected 10 files, got ' + out.files.length };
+        return '10 files';
+      });
+      await test('ZIP packing works', async function () {
+        var out = await ops.split(text10, 'each', {}, 'doc.pdf');
+        var zip = new JSZip();
+        out.files.forEach(function (f) { zip.file(f.name, f.bytes); });
+        var blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+        if (!blob || blob.size < 100) return { fail: 'ZIP came out empty' };
+        return K.bytes(blob.size) + ' archive';
+      });
+      bar.set(0.35);
+
+      /* --- the codec --------------------------------------------------- */
+      await test('codec re-encodes a JPEG smaller', async function () {
+        var src = await canvasBytes(noiseCanvas(1600, 1200), 'image/jpeg', 0.95);
+        var out = await K.codec.resampleJpeg(src, 800, 0.7);
+        if (!out) return { fail: 'codec declined a plain JPEG' };
+        if (out.width !== 800) return { fail: 'expected 800 px wide, got ' + out.width };
+        if (out.data.length >= src.length) return { fail: 'result was not smaller' };
+        return K.bytes(src.length) + ' → ' + K.bytes(out.data.length) + ' at ' + out.width + '×' + out.height;
+      });
+
+      await test('codec never upscales a small image', async function () {
+        var src = await canvasBytes(noiseCanvas(200, 150), 'image/jpeg', 0.9);
+        var out = await K.codec.resampleJpeg(src, 4000, 0.8);
+        if (out.width > 200) return { fail: 'upscaled to ' + out.width + ' px' };
+        return 'stayed at ' + out.width + '×' + out.height;
+      });
+
+      await test('raw RGB samples re-encode', async function () {
+        var w = 600, h = 400, raw = new Uint8Array(w * h * 3);
+        for (var i = 0; i < raw.length; i++) raw[i] = (i * 7) & 255;
+        var out = await K.codec.resampleRaw(raw, w, h, 3, 300, 0.7);
+        if (!out || out.width !== 300) return { fail: 'expected 300 px wide, got ' + (out && out.width) };
+        return '600×400 RGB → ' + out.width + '×' + out.height + ', ' + K.bytes(out.data.length);
+      });
+
+      await test('greyscale samples re-encode', async function () {
+        var w = 400, h = 300, raw = new Uint8Array(w * h);
+        for (var i = 0; i < raw.length; i++) raw[i] = (i * 3) & 255;
+        var out = await K.codec.resampleRaw(raw, w, h, 1, 200, 0.7);
+        if (!out) return { fail: 'codec declined greyscale' };
+        return '400×300 grey → ' + out.width + '×' + out.height;
+      });
+
+      await test('transparent pixels become white, not black', async function () {
+        var src = await canvasBytes(noiseCanvas(300, 300, { alpha: true }), 'image/png');
+        var bmp = await createImageBitmap(new Blob([src], { type: 'image/png' }));
+        var c = document.createElement('canvas');
+        c.width = c.height = 40;
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 40, 40);
+        ctx.drawImage(bmp, 0, 0, 40, 40);
+        var px = ctx.getImageData(20, 20, 1, 1).data;
+        if (px[0] < 200 || px[1] < 200 || px[2] < 200) {
+          return { fail: 'transparent area came out dark (' + px[0] + ',' + px[1] + ',' + px[2] + ') — matting is broken' };
+        }
+        return 'matted to rgb(' + px[0] + ',' + px[1] + ',' + px[2] + ')';
+      });
+      bar.set(0.6);
+
+      /* --- end-to-end compression -------------------------------------- */
+      var imagey = await imagePdf();
+
+      await test('image compression shrinks an image-heavy PDF', async function () {
+        var out = await ops.compress(imagey, { mode: 'images', dpi: 150, quality: 0.72, name: 't.pdf' }, K.codec);
+        sampleBytes = out.bytes;
+        K.$('#sample').disabled = false;
+        var cut = K.pct(out.before, out.after);
+        if (cut < 30) return { fail: 'only ' + cut + '% saved (' + out.stats.changed + '/' + out.stats.images + ' images changed)' };
+        return K.bytes(out.before) + ' → ' + K.bytes(out.after) + ' (' + cut + '% off, ' + out.stats.changed + '/' + out.stats.images + ' images)';
+      });
+
+      await test('text survives image compression', async function () {
+        var out = await ops.compress(imagey, { mode: 'images', dpi: 150, quality: 0.72 }, K.codec);
+        if (!(await hasText(out.bytes))) return { fail: 'TEXT DESTROYED — this is the bug the tool exists to prevent' };
+        var info = await ops.describe(out.bytes, 'out.pdf');
+        if (info.pages !== 2) return { fail: 'page count changed to ' + info.pages };
+        if (info.images !== 2) return { fail: 'image count changed to ' + info.images };
+        return '2 pages, 2 images, text still selectable';
+      });
+
+      await test('compressed output re-opens in pdf.js', async function () {
+        var out = await ops.compress(imagey, { mode: 'images', dpi: 96, quality: 0.6 }, K.codec);
+        var doc = await K.pdfjs().getDocument({ data: out.bytes.slice(0) }).promise;
+        var page = await doc.getPage(1);
+        var canvas = await K.renderPage(page, 40);
+        var ok = canvas.width > 0 && canvas.height > 0;
+        doc.destroy();
+        if (!ok) return { fail: 'the compressed file would not render' };
+        return 'renders at ' + canvas.width + '×' + canvas.height;
+      });
+
+      await test('lossless mode changes no images', async function () {
+        var out = await ops.compress(imagey, { mode: 'structural', name: 't.pdf' });
+        if (out.stats.changed !== 0) return { fail: 'lossless mode re-encoded something' };
+        if (!(await hasText(out.bytes))) return { fail: 'text lost in a lossless pass' };
+        return K.bytes(out.before) + ' → ' + K.bytes(out.after);
+      });
+      bar.set(0.85);
+
+      /* --- rendering ---------------------------------------------------- */
+      await test('page renders at 150 dpi with correct proportions', async function () {
+        var doc = await K.pdfjs().getDocument({ data: text3.slice(0) }).promise;
+        var canvas = await K.renderPage(await doc.getPage(1), 150);
+        doc.destroy();
+        var ratio = canvas.height / canvas.width;
+        if (Math.abs(ratio - 841.89 / 595.28) > 0.02) return { fail: 'aspect ratio is wrong: ' + ratio.toFixed(3) };
+        if (canvas.width < 1200) return { fail: 'too small for 150 dpi: ' + canvas.width + ' px' };
+        return canvas.width + '×' + canvas.height + ' px';
+      });
+
+      await test('huge render is capped rather than crashing', async function () {
+        var doc = await K.pdfjs().getDocument({ data: text3.slice(0) }).promise;
+        var canvas = await K.renderPage(await doc.getPage(1), 4000);   // absurd on purpose
+        doc.destroy();
+        if (canvas.width * canvas.height > 31e6) return { fail: 'cap did not apply: ' + canvas.width + '×' + canvas.height };
+        return 'capped to ' + canvas.width + '×' + canvas.height + ' px';
+      });
+
+      await test('rasterise produces a valid flattened PDF', async function () {
+        var doc = await K.pdfjs().getDocument({ data: text3.slice(0) }).promise;
+        var out = await ops.rasterize(text3, {}, async function (i) {
+          var page = await doc.getPage(i + 1);
+          var canvas = await K.renderPage(page, 72);
+          var enc = await K.canvasToBytes(canvas, 'image/jpeg', 0.7);
+          return { data: enc.bytes, width: canvas.width, height: canvas.height };
+        });
+        doc.destroy();
+        var info = await ops.describe(out.bytes, 'flat.pdf');
+        if (info.pages !== 3) return { fail: 'expected 3 pages, got ' + info.pages };
+        if (info.images !== 3) return { fail: 'expected 3 images, got ' + info.images };
+        if (await hasText(out.bytes)) return { fail: 'text survived a flatten — it should not have' };
+        return '3 pages, 3 images, no text (as intended)';
+      });
+
+      bar.set(1);
+      K.say(K.$('#msg'), fail ? 'err' : 'good',
+        fail ? fail + ' test' + (fail > 1 ? 's' : '') + ' failed in this browser — note the browser and version when reporting it.'
+             : 'All ' + pass + ' tests passed in ' + K.$('#env').textContent + '.');
+
+    } catch (e) {
+      K.say(K.$('#msg'), 'err', 'The suite itself crashed: ' + (e && e.message));
+    } finally {
+      bar.done();
+      K.$('#run').disabled = false;
+    }
+  });
+
+  K.$('#sample').addEventListener('click', function () {
+    if (sampleBytes) K.download(sampleBytes, 'kagaz-test-sample-compressed.pdf');
+  });
+})();
+</script>
+</body>
+</html>

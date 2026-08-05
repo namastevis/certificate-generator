@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Kagaz">
+  <rect width="64" height="64" rx="6" fill="#F1F2EE"/>
+  <path d="M16 10h22l12 12v32a2 2 0 0 1-2 2H16a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2z" fill="#fff" stroke="#14171D" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M38 10v12h12" fill="none" stroke="#14171D" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M22 34h20M22 42h20M22 26h10" stroke="#1857C4" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -3,1241 +3,177 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Certificate Press — batch personalized PDFs from your artwork</title>
-<script src="vendor/pdf-lib.min.js"></script>
-<script src="vendor/pdf.min.js"></script>
-<script src="vendor/fontkit.umd.min.js"></script>
-<script src="vendor/jszip.min.js"></script>
-<style>
-  :root{
-    --paper:#F1F2EE; --card:#FFFFFF; --ink:#14171D; --ink-soft:#5B616C;
-    --line:#DCDED7; --line-strong:#C4C7BE;
-    --blue:#1857C4; --blue-deep:#0E3A8C; --blue-wash:#EAF0FB;
-    --reg:#D23B36; --ok:#1B7A43;
-    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0}
-  body{background:var(--paper); color:var(--ink); font-family:var(--sans);
-    font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;}
-  .wrap{max-width:1220px; margin:0 auto; padding:26px 20px 90px}
-
-  .mast{display:flex; align-items:baseline; justify-content:space-between; gap:16px;
-    border-bottom:2px solid var(--ink); padding-bottom:14px; margin-bottom:8px; flex-wrap:wrap}
-  .mast h1{font-size:26px; font-weight:800; letter-spacing:-.02em; margin:0}
-  .mast h1 .mk{color:var(--blue)}
-  .mast .actions{display:flex; gap:8px}
-  .mast .tag{font-family:var(--mono); font-size:11px; text-transform:uppercase;
-    letter-spacing:.16em; color:var(--ink-soft); width:100%}
-  .sub{font-family:var(--mono); font-size:12px; color:var(--ink-soft); letter-spacing:.04em; margin:10px 0 24px}
-
-  .grid{display:grid; grid-template-columns:minmax(330px,430px) 1fr; gap:24px; align-items:start}
-  @media(max-width:900px){ .grid{grid-template-columns:1fr} .stage{position:static !important} }
-
-  .panel{background:var(--card); border:1px solid var(--line); border-radius:2px; margin-bottom:14px}
-  .panel > .head{display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--line)}
-  .step{font-family:var(--mono); font-size:11px; font-weight:700; color:#fff; background:var(--ink);
-    width:22px; height:22px; display:grid; place-items:center; border-radius:2px; flex:0 0 auto}
-  .panel.done .step{background:var(--blue)}
-  .head h2{font-size:14px; margin:0; font-weight:700}
-  .head .note{margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--ink-soft); text-align:right}
-  .body{padding:14px}
-
-  label.fld{display:block; font-family:var(--mono); font-size:11px; text-transform:uppercase;
-    letter-spacing:.1em; color:var(--ink-soft); margin:0 0 6px}
-  .row{display:flex; gap:10px; flex-wrap:wrap}
-  .row > *{flex:1; min-width:0}
-
-  input[type=text],input[type=number],select,textarea{
-    width:100%; font-family:var(--sans); font-size:14px; color:var(--ink);
-    background:#fff; border:1px solid var(--line-strong); border-radius:2px; padding:8px 10px}
-  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--blue); outline-offset:-1px}
-  textarea{min-height:140px; resize:vertical; font-family:var(--mono); font-size:13px}
-  input[type=range]{width:100%; accent-color:var(--blue)}
-  input[type=color]{width:100%; height:36px; padding:2px; cursor:pointer; border:1px solid var(--line-strong); border-radius:2px; background:#fff}
-
-  .drop{border:1.5px dashed var(--line-strong); border-radius:3px; background:#fbfbf9;
-    padding:20px 14px; text-align:center; cursor:pointer; transition:.15s}
-  .drop:hover,.drop.over{border-color:var(--blue); background:var(--blue-wash)}
-  .drop .big{font-weight:600; margin-bottom:3px}
-  .drop .small{font-family:var(--mono); font-size:11px; color:var(--ink-soft)}
-  .filechip{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12px;
-    background:var(--blue-wash); border:1px solid #cfe0fb; border-radius:2px; padding:7px 10px; margin-top:10px}
-  .filechip b{color:var(--blue-deep)}
-  .filechip .x{margin-left:auto; color:var(--ink-soft); cursor:pointer; border:none; background:none; font-size:14px}
-
-  .seg{display:flex; border:1px solid var(--line-strong); border-radius:2px; overflow:hidden}
-  .seg button{flex:1; border:none; background:#fff; padding:7px 6px; font-family:var(--mono);
-    font-size:12px; cursor:pointer; color:var(--ink-soft); border-right:1px solid var(--line)}
-  .seg button:last-child{border-right:none}
-  .seg button[aria-pressed=true]{background:var(--ink); color:#fff}
-
-  .meas{font-family:var(--mono); font-size:12px; background:#f6f6f3; border:1px solid var(--line);
-    border-radius:2px; padding:7px 10px; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap}
-  .meas span:last-child{color:var(--blue-deep); font-weight:700}
-  .hint{font-family:var(--mono); font-size:11px; color:var(--ink-soft); margin-top:8px; line-height:1.55}
-  .callout{font-family:var(--mono); font-size:11.5px; border-radius:2px; padding:9px 11px; margin-top:10px; line-height:1.55}
-  .warn{color:#8a3a10; background:#fdf1e7; border:1px solid #f0d3ba}
-  .err{color:#8a1410; background:#fdeceb; border:1px solid #f2c4c1}
-  .good{color:var(--ok); background:#eaf6ee; border:1px solid #cfe6d7}
-
-  /* field chips */
-  .chips{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px}
-  .chip{display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:12px;
-    border:1px solid var(--line-strong); background:#fff; border-radius:2px; padding:6px 9px; cursor:pointer}
-  .chip.sel{border-color:var(--blue); background:var(--blue-wash); color:var(--blue-deep); font-weight:700}
-  .chip .dot{width:8px; height:8px; border-radius:50%; background:currentColor; opacity:.55}
-  .chip.add{border-style:dashed; color:var(--ink-soft)}
-  .chip .del{border:none; background:none; cursor:pointer; color:inherit; opacity:.6; padding:0 0 0 2px}
-  .chip .del:hover{opacity:1}
-
-  /* proof stage */
-  .stage{position:sticky; top:16px}
-  .stage .shead{display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap}
-  .stage .shead .ey{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft)}
-  .rownav{margin-left:auto; display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:12px}
-  .rownav button{border:1px solid var(--line-strong); background:#fff; border-radius:2px;
-    width:26px; height:26px; cursor:pointer; font-family:var(--mono)}
-  .rownav button:disabled{opacity:.35; cursor:default}
-  .rownav .cur{min-width:86px; text-align:center; color:var(--ink-soft)}
-
-  .proof{position:relative; background:repeating-conic-gradient(#eee 0% 25%, #f7f7f5 0% 50%) 50%/22px 22px;
-    border:1px solid var(--line-strong); border-radius:2px; padding:34px; min-height:330px;
-    display:flex; align-items:center; justify-content:center; overflow:hidden}
-  .proof.empty{background:#fbfbf9}
-  .empty-msg{text-align:center; color:var(--ink-soft); font-family:var(--mono); font-size:12px; line-height:1.8}
-  .empty-msg .ic{font-size:26px; display:block; margin-bottom:8px; color:var(--line-strong)}
-  .empty-msg button{margin-top:10px}
-
-  .sheet{position:relative; box-shadow:0 6px 24px rgba(20,23,29,.14); background:#fff}
-  #tplCanvas{display:block; max-width:100%; height:auto}
-  .reg{position:absolute; width:20px; height:20px; pointer-events:none; opacity:.85}
-  .reg::before,.reg::after{content:""; position:absolute; background:var(--reg)}
-  .reg::before{left:50%; top:0; width:1px; height:100%}
-  .reg::after{top:50%; left:0; height:1px; width:100%}
-  .reg.tl{left:-26px; top:-26px}.reg.tr{right:-26px; top:-26px}
-  .reg.bl{left:-26px; bottom:-26px}.reg.br{right:-26px; bottom:-26px}
-
-  .fEl{position:absolute; white-space:nowrap; line-height:1; cursor:grab; user-select:none;
-    padding:1px 2px; outline:1px dashed rgba(24,87,196,.35); touch-action:none}
-  .fEl:hover{outline-color:rgba(24,87,196,.7)}
-  .fEl.sel{outline:1.5px dashed var(--blue)}
-  .fEl.drag{cursor:grabbing}
-  .fEl .tagLbl{position:absolute; top:-16px; left:0; font:700 9px var(--mono); letter-spacing:.08em;
-    color:#fff; background:var(--blue); border-radius:2px; padding:1px 5px; display:none; text-transform:uppercase; white-space:nowrap}
-  .fEl.sel .tagLbl{display:block}
-  /* fixed anchor marker — identical position on every certificate */
-  .anch{position:absolute; width:13px; height:13px; pointer-events:none; z-index:3}
-  .anch::before,.anch::after{content:""; position:absolute; background:var(--blue)}
-  .anch::before{left:50%; top:0; width:1.5px; height:100%; transform:translateX(-50%)}
-  .anch::after{top:50%; left:0; height:1.5px; width:100%; transform:translateY(-50%)}
-  .layerHint{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    pointer-events:none; font:12px var(--mono); color:var(--ink-soft); text-align:center;
-    background:rgba(255,255,255,.55); line-height:1.8}
-
-  .warnline{margin-top:10px}
-
-  .bar{position:sticky; bottom:0; margin-top:20px; background:var(--card); border:1px solid var(--line);
-    border-top:2px solid var(--ink); border-radius:2px; padding:13px 16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap}
-  .bar .count{font-family:var(--mono); font-size:12px; color:var(--ink-soft)}
-  .bar .count b{color:var(--ink); font-size:15px}
-  .btn{font-family:var(--sans); font-weight:700; font-size:14px; border:none; border-radius:2px;
-    padding:11px 18px; cursor:pointer; letter-spacing:-.01em}
-  .btn.primary{background:var(--blue); color:#fff}
-  .btn.primary:hover{background:var(--blue-deep)}
-  .btn:disabled{background:#b7bec9 !important; color:#fff !important; cursor:not-allowed; border-color:transparent !important}
-  .btn.ghost{background:#fff; color:var(--ink); border:1px solid var(--line-strong)}
-  .btn.ghost:hover{border-color:var(--ink)}
-  .btn.sm{padding:8px 12px; font-size:12.5px; font-weight:600}
-  .progress{font-family:var(--mono); font-size:12px; color:var(--blue-deep)}
-  .spacer{flex:1}
-  .foot{text-align:center; font-family:var(--mono); font-size:11px; color:var(--ink-soft);
-    margin-top:28px; letter-spacing:.03em}
-  .foot a{color:var(--blue-deep); text-decoration:none}
-  .foot a:hover{text-decoration:underline}
-
-  /* how-it-works overlay */
-  .modal{position:fixed; inset:0; background:rgba(20,23,29,.55); display:none;
-    align-items:flex-start; justify-content:center; padding:30px 16px; z-index:50; overflow:auto}
-  .modal.open{display:flex}
-  .modal .box{background:var(--paper); border:1px solid var(--line-strong); border-top:3px solid var(--ink);
-    border-radius:2px; max-width:1080px; width:100%; position:relative; padding:14px}
-  .modal .box img{display:block; width:100%; height:auto}
-  .modal .close{position:absolute; top:10px; right:10px; border:1px solid var(--line-strong);
-    background:#fff; border-radius:2px; width:30px; height:30px; cursor:pointer; font-size:14px; line-height:1}
-  .modal .close:hover{border-color:var(--ink)}
-</style>
+<title>Kagaz — PDF tools that never upload your files</title>
+<meta name="description" content="Merge, split, compress and convert PDFs entirely inside your browser. Nothing is uploaded, because there is no server. Free, unlimited, open source, made in India.">
+<link rel="canonical" href="https://kagaz.namastevis.in/">
+<meta property="og:title" content="Kagaz — PDF tools that never upload your files">
+<meta property="og:description" content="Merge, split, compress and convert PDFs entirely in your browser. No uploads, no accounts, no daily limits.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kagaz.namastevis.in/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:creator" content="@namastevis">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="shared/kagaz.css">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"WebSite",
+  "name":"Kagaz",
+  "url":"https://kagaz.namastevis.in/",
+  "description":"Browser-only PDF tools. Nothing is uploaded.",
+  "author":{"@type":"Person","name":"Amit Jena","url":"https://namastevis.in/"},
+  "license":"https://opensource.org/licenses/MIT"
+}
+</script>
 </head>
 <body>
 <div class="wrap">
-  <div class="mast">
-    <h1>Certificate <span class="mk">Press</span></h1>
-    <div class="actions">
-      <button class="btn ghost sm" id="howBtn">How it works</button>
-      <button class="btn ghost sm" id="saveProj">Save project</button>
-      <button class="btn ghost sm" id="openProj">Open project</button>
-      <input type="file" id="projInput" accept=".json,application/json" hidden>
-    </div>
-    <div class="tag">batch proof · names &amp; details on your artwork · everything stays in this browser</div>
-  </div>
-  <div class="sub">Load your artwork PDF → paste your list → place each detail once → download every personalized page as one PDF or a ZIP of individual files.</div>
 
-  <div class="grid">
-    <!-- ================= LEFT ================= -->
-    <div class="controls">
+  <header class="mast">
+    <a class="brand" href="/">
+      <span class="dev">कागज़</span><span class="lat">Kagaz</span>
+      <small>paper tools</small>
+    </a>
+    <nav>
+      <a href="#tools">Tools</a>
+      <a href="contribute/">Contribute</a>
+      <a href="https://github.com/namastevis/kagaz">Source</a>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
 
-      <!-- STEP 1 -->
-      <div class="panel" id="p1">
-        <div class="head"><span class="step">1</span><h2>Artwork</h2><span class="note" id="p1note">PDF template</span></div>
-        <div class="body">
-          <div class="drop" id="drop">
-            <div class="big">Drop your design PDF here</div>
-            <div class="small">or tap to choose · export .ai / Canva / Figma as PDF · leave the personalised spots blank</div>
-          </div>
-          <input type="file" id="tplInput" accept="application/pdf,.pdf" hidden>
-          <div id="tplChip"></div>
-          <div id="sizeBlock" style="display:none; margin-top:12px">
-            <label class="fld">Page size</label>
-            <div class="meas"><span id="sizeDetected">—</span><span id="sizeFinal">—</span></div>
-            <div class="row" style="margin-top:8px">
-              <select id="sizePreset">
-                <option value="keep">Keep artwork size</option>
-                <option value="a4l">A4 landscape · 297×210</option>
-                <option value="a4p">A4 portrait · 210×297</option>
-                <option value="a3l">A3 landscape · 420×297</option>
-                <option value="ltrl">Letter landscape · 279×216</option>
-                <option value="custom">Custom (mm)…</option>
-              </select>
-            </div>
-            <div class="row" id="customSize" style="display:none; margin-top:8px">
-              <div><label class="fld">Width mm</label><input type="number" id="cw" min="10" step="1"></div>
-              <div><label class="fld">Height mm</label><input type="number" id="ch" min="10" step="1"></div>
-            </div>
-          </div>
-          <div id="layoutBlock" style="display:none; margin-top:12px">
-            <label class="fld">Layout</label>
-            <div class="seg" id="layoutSeg">
-              <button data-l="single" aria-pressed="true">One per page</button>
-              <button data-l="grid">Grid per sheet · badges</button>
-            </div>
-            <div id="gridOpts" style="display:none; margin-top:10px">
-              <div class="row">
-                <div style="flex:1.7"><label class="fld">Sheet</label>
-                  <select id="gSheet">
-                    <option value="a4p">A4 portrait</option><option value="a4l">A4 landscape</option>
-                    <option value="a3p">A3 portrait</option><option value="a3l">A3 landscape</option>
-                    <option value="ltrp">Letter portrait</option>
-                  </select></div>
-                <div><label class="fld">Cols</label><input type="number" id="gCols" min="1" max="10" value="2"></div>
-                <div><label class="fld">Rows</label><input type="number" id="gRows" min="1" max="12" value="4"></div>
-              </div>
-              <div class="row" style="margin-top:8px">
-                <div><label class="fld">Margin mm</label><input type="number" id="gMargin" min="0" value="10"></div>
-                <div><label class="fld">Gap mm</label><input type="number" id="gGap" min="0" value="6"></div>
-                <div style="flex:1.3; display:flex; align-items:flex-end; padding-bottom:8px">
-                  <label style="display:flex; gap:6px; align-items:center; font-size:13px">
-                    <input type="checkbox" id="gCrop" checked style="accent-color:var(--blue)"> Crop marks</label></div>
-              </div>
-              <div class="hint" id="gridNote"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+  <p class="eyebrow">Free · unlimited · open source · made in India</p>
+  <h1>Paper tools that never leave your browser.</h1>
+  <p class="lede">
+    Merge, split, compress and convert PDFs on your own machine. Nothing you open here
+    is uploaded — not to my server, not to anyone else's. <b>There is no server.</b>
+  </p>
 
-      <!-- STEP 2 -->
-      <div class="panel" id="p2">
-        <div class="head"><span class="step">2</span><h2>People &amp; details</h2><span class="note" id="dataNote">0 rows</span></div>
-        <div class="body">
-          <label class="fld" for="data">Paste from a spreadsheet — one person per line, extra columns welcome</label>
-          <textarea id="data" placeholder="Priya Sharma	Everything Is Data	13–18 July 2026
-Rahul Verma	Design for Emerging Tech	13–18 July 2026"></textarea>
-          <div class="row" style="margin-top:8px; align-items:center">
-            <label style="display:flex; gap:8px; align-items:center; font-size:13px; flex:0 0 auto">
-              <input type="checkbox" id="hasHeader" style="accent-color:var(--blue)"> First line is column headings
-            </label>
-            <div class="spacer"></div>
-            <span class="hint" id="colNote" style="margin:0"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- STEP 3 -->
-      <div class="panel" id="p3">
-        <div class="head"><span class="step">3</span><h2>Fields on the design</h2><span class="note">drag the outlined text on the preview →<br>one placement applies to every page</span></div>
-        <div class="body">
-          <div class="chips" id="chips"></div>
-
-          <div id="fieldEditor" style="display:none">
-            <div class="row">
-              <div style="flex:1.4" id="colWrap"><label class="fld">Uses column</label><select id="fCol"></select></div>
-              <div><label class="fld">Alignment</label>
-                <div class="seg" id="alignSeg">
-                  <button data-a="left">Left</button><button data-a="center" aria-pressed="true">Centre</button><button data-a="right">Right</button>
-                </div>
-              </div>
-            </div>
-            <div class="row" id="serialRow" style="display:none; margin-top:10px">
-              <div><label class="fld">Serial prefix — optional, e.g. CIID-</label>
-                <input type="text" id="fPrefix" placeholder="leave empty for plain 001, 002…"></div>
-            </div>
-
-            <div id="imgOpts" style="display:none; margin-top:12px">
-              <label class="fld">Image source</label>
-              <div class="seg" id="imgModeSeg">
-                <button data-m="static" aria-pressed="true">Same on every page</button>
-                <button data-m="row">Per person · photos</button>
-              </div>
-              <div id="imgStaticWrap" style="margin-top:8px">
-                <button class="btn ghost sm" id="imgUpBtn">Upload image (.png / .jpg)…</button>
-                <input type="file" id="imgInput" accept="image/png,image/jpeg" hidden>
-                <div id="imgChip"></div>
-              </div>
-              <div id="imgRowWrap" style="display:none; margin-top:8px">
-                <button class="btn ghost sm" id="poolUpBtn">Upload photo set (multiple files)…</button>
-                <input type="file" id="poolInput" accept="image/png,image/jpeg" multiple hidden>
-                <div id="poolChip"></div>
-                <div class="hint">The selected column must contain each person's photo file name (e.g. <b>priya.jpg</b> — extension optional). Unmatched rows are flagged.</div>
-              </div>
-              <label class="fld" style="margin-top:12px">Image width <span id="iwVal" style="color:var(--blue-deep)">16%</span> of page width</label>
-              <input type="range" id="iwidth" min="3" max="80" value="16">
-            </div>
-
-            <div id="textOpts">
-            <div class="row" style="margin-top:10px">
-              <div style="flex:1.4"><label class="fld">Font</label><select id="fFont"></select></div>
-              <div id="weightWrap"><label class="fld">Weight</label>
-                <div class="seg" id="weightSeg"><button data-w="bold" aria-pressed="true">Bold</button><button data-w="regular">Regular</button></div>
-              </div>
-            </div>
-            <button class="btn ghost sm" id="fontUpBtn" style="margin-top:8px">Upload a font (.ttf / .otf)…</button>
-            <input type="file" id="fontInput" accept=".ttf,.otf,font/ttf,font/otf" hidden>
-            <div id="fontChip"></div>
-            <div class="row" style="margin-top:12px">
-              <div style="flex:2"><label class="fld">Size <span id="sizeVal" style="color:var(--blue-deep)">40 pt</span></label>
-                <input type="range" id="fsize" min="8" max="140" value="40"></div>
-              <div><label class="fld">Colour</label><input type="color" id="fcolor" value="#16305C"></div>
-            </div>
-            <label class="fld" style="margin-top:12px">Shrink long values to fit within <span id="fitVal" style="color:var(--blue-deep)">62%</span> of page width</label>
-            <input type="range" id="fitw" min="15" max="95" value="62">
-            </div><!-- /textOpts -->
-          </div>
-          <div class="hint" id="noFieldHint">Add a field for each changing detail — Name, Workshop, Date… Each field reads one column of your pasted data.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ================= RIGHT ================= -->
-    <div class="stage">
-      <div class="shead">
-        <span class="ey">Proof preview</span>
-        <div class="rownav" id="rownav" style="display:none">
-          <button id="rPrev" aria-label="previous row">‹</button>
-          <span class="cur" id="rCur">row 1 / 1</span>
-          <button id="rNext" aria-label="next row">›</button>
-          <button id="rLong" title="jump to the longest value" style="width:auto; padding:0 8px">longest</button>
-        </div>
-      </div>
-      <div class="proof empty" id="proof">
-        <div class="empty-msg" id="emptyMsg">
-          <span class="ic">⌷</span>
-          Load your design PDF to begin —<br>or explore with a working example.<br>
-          <button class="btn ghost sm" id="sampleBtn">Load sample project</button>
-          <button class="btn ghost sm" id="howBtn2">See how it works</button>
-        </div>
-        <div class="sheet" id="sheet" style="display:none">
-          <span class="reg tl"></span><span class="reg tr"></span><span class="reg bl"></span><span class="reg br"></span>
-          <canvas id="tplCanvas"></canvas>
-          <div id="fieldLayer"></div>
-        </div>
-      </div>
-      <div class="warnline" id="warnline"></div>
-    </div>
+  <div class="proofstrip">
+    <b>Don't take my word for it.</b><br>
+    Open your browser's developer tools, switch to the <b>Network</b> tab, then drop a file
+    on any tool below. Nothing leaves. Every page here is plain HTML with the PDF libraries
+    sitting in <code>/vendor</code> — no analytics, no trackers, no accounts, no upload endpoint to hit.
   </div>
 
-  <div class="bar">
-    <div class="count" id="countBox"><b id="barCount">0</b> personalised pages ready</div>
-    <span class="progress" id="progress"></span>
-    <div class="spacer"></div>
-    <button class="btn ghost" id="pngBtn" disabled>PNGs (ZIP)</button>
-    <button class="btn ghost" id="zipBtn" disabled>Individual PDFs (ZIP)</button>
-    <button class="btn primary" id="genBtn" disabled>Download one PDF</button>
+  <h2 class="eyebrow" id="tools">The tools</h2>
+  <div class="tools">
+
+    <a class="tool" href="merge-pdf/">
+      <span class="kicker">Combine</span>
+      <h3>Merge PDF <span class="arrow">→</span></h3>
+      <p>Join any number of PDFs into one. Page sizes, orientation and rotation are preserved exactly — nothing is squashed onto A4.</p>
+    </a>
+
+    <a class="tool" href="split-pdf/">
+      <span class="kicker">Divide</span>
+      <h3>Split PDF <span class="arrow">→</span></h3>
+      <p>Pull out a page range, break a file every N pages, or explode it into one file per page. Useful for splitting a scanned batch of invoices.</p>
+    </a>
+
+    <a class="tool" href="compress-pdf/">
+      <span class="kicker">Shrink</span>
+      <h3>Compress PDF <span class="arrow">→</span></h3>
+      <p>Downsamples the images inside your PDF and leaves the text as text. Most tools quietly flatten the whole page into a picture. This one tells you what it did.</p>
+    </a>
+
+    <a class="tool" href="pdf-to-jpg/">
+      <span class="kicker">Convert</span>
+      <h3>PDF to JPG <span class="arrow">→</span></h3>
+      <p>Turn pages into images at whatever resolution you actually need — 72 dpi for a screen, 300 dpi for print. You pick, not the tool.</p>
+    </a>
+
+    <a class="tool" href="certificate/">
+      <span class="kicker">Batch</span>
+      <h3>Certificate Press <span class="arrow">→</span></h3>
+      <p>One design × many names. Paste a spreadsheet, drop your artwork, and get every personalised certificate, badge or ID card as one PDF or a ZIP.</p>
+    </a>
+
+    <a class="tool soon" href="contribute/">
+      <span class="kicker">Not built yet</span>
+      <h3>JPG to PDF · Rotate · Page numbers · Watermark</h3>
+      <p>Each of these is one self-contained file and an afternoon's work. They are written up as good first issues if you fancy it.</p>
+    </a>
+
   </div>
 
-  <div class="foot">Made with ❤️ in India · works even when the WiFi doesn’t · <a href="LICENSE" target="_blank" rel="noopener">MIT licensed</a></div>
+  <section class="prose">
+
+    <h2>Why this exists</h2>
+    <p>
+      Every other free PDF site works the same way: you upload your file to a company's
+      servers, they process it there, and you download the result. That is fine for a
+      restaurant menu. It is not fine for a signed contract, a medical report, a bank
+      statement, or a scan of somebody's Aadhaar card — and those are exactly the documents
+      people put through these tools every day.
+    </p>
+    <p>
+      Kagaz does the work in your browser instead. That single decision has some pleasant
+      side effects: there are no daily task limits, because running the job costs me nothing.
+      There are no file size caps beyond what your own machine can hold. There are no
+      accounts. And once the page has loaded, you can turn off your WiFi and keep working.
+    </p>
+
+    <h2>What Kagaz will not do</h2>
+    <p>
+      Being honest about the edges is the whole point, so: <b>there is no PDF to Word
+      conversion here, and there probably never will be.</b> Doing that properly means
+      reconstructing a layout from a page description, and it cannot be done well inside
+      a browser. Every free tool that offers it is sending your document to a server.
+      If you need it, that trade-off might be worth it to you — but you should know you
+      are making it.
+    </p>
+    <p>
+      Kagaz also will not remove a password you do not have, and will not claim that a
+      signature drawn on a page is a legally binding e-signature. When compression cannot
+      safely shrink an image — a CMYK scan, a JPEG 2000 photo — it leaves it alone and
+      says so, rather than corrupting it to make a number look better.
+    </p>
+
+    <h2>How it is built</h2>
+    <p>
+      Plain HTML, CSS and JavaScript. No framework, no build step, no bundler. Each tool is
+      one self-contained file. The heavy lifting is done by
+      <a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>,
+      <a href="https://mozilla.github.io/pdf.js/">pdf.js</a> and
+      <a href="https://stuk.github.io/jszip/">JSZip</a>, all vendored into the repository
+      rather than pulled from a CDN — a CDN would quietly break the offline promise.
+    </p>
+    <p>
+      If you want to change something, clone the repository and open a file in your browser.
+      That is the entire development environment.
+    </p>
+
+  </section>
+
+  <section class="who">
+    <h2>Who made this</h2>
+    <p>
+      I'm <b>Amit Jena</b> — trained in mathematics and computer science, pulled into design
+      by accident, and now mostly making things that turn data and documents into something
+      a person can actually use. Kagaz is the documents half of that. The rest of my work
+      lives next door.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">namastevis.in</a>
+      <a href="https://github.com/namastevis">GitHub</a>
+      <a href="https://linkedin.com/in/namastevis">LinkedIn</a>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <span>works even when the WiFi doesn't</span> <span class="dot">·</span>
+      <a href="LICENSE">MIT licensed</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source on GitHub</a> <span class="dot">·</span>
+      <a href="contribute/">Contribute or buy me a chai</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> Amit Jena · no cookies, no analytics, no upload</div>
+  </footer>
+
 </div>
-
-<div class="modal" id="howModal" role="dialog" aria-label="How Certificate Press works">
-  <div class="box">
-    <button class="close" id="howClose" aria-label="close">✕</button>
-    <img src="flow.svg" alt="How it works: 1 load your artwork PDF, 2 paste people and details from a spreadsheet, 3 add fields and drag them into place, 4 proof every row, 5 export as one merged PDF, a ZIP of individual PDFs, or a ZIP of PNG images. Along the way: upload your own fonts, badge grid layout with crop marks and serial numbers, place signatures or stamps on every page or per-person photos for ID cards, and save the whole project to one file. Everything stays in your browser.">
-  </div>
-</div>
-
-<script>
-/* =============================================================================
-   Certificate Press v2 — multi-field personalization, fully client-side.
-============================================================================ */
-const { PDFDocument, rgb, StandardFonts } = PDFLib;
-pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
-const PT_PER_MM = 72/25.4;
-const $ = s => document.querySelector(s);
-const measureCtx = document.createElement("canvas").getContext("2d");
-
-/* ---------------- state ---------------- */
-const BUILTIN_FONTS = [
-  {id:"helv", label:"Helvetica", kind:"std", css:"Helvetica,Arial,sans-serif"},
-  {id:"times", label:"Times", kind:"std", css:'"Times New Roman",Times,serif'},
-  {id:"cour", label:"Courier", kind:"std", css:'"Courier New",Courier,monospace'},
-];
-const state = {
-  tpl:{bytes:null, name:"", wpt:0, hpt:0, pageCount:1},
-  cssScale:1, cssW:0, cssH:0,
-  dataRaw:"", hasHeader:false, rows:[], headers:null, nCols:0,
-  fonts:[...BUILTIN_FONTS],        // pool; uploaded fonts appended
-  fields:[],                        // text: {type,col,fontId,weight,sizePt,color,align,fitFrac,xFrac,yFrac,serialPrefix}
-                                    // image:{type:'image',imgMode:'static'|'row',imgId,col,widthFrac,align,xFrac,yFrac}
-  selField:null, previewRow:0,
-  layout:{mode:"single", sheet:"a4p", cols:2, rows:4, marginMm:10, gapMm:6, crop:true},
-  assets:{},                        // id -> {name, bytes, url, w, h}
-  photoPool:[],                     // asset ids uploaded as the per-person photo set
-};
-let assetSeq=1;
-let fieldSeq = 1;
-
-/* ---------------- helpers ---------------- */
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function bytesToB64(bytes){ let s=""; const CH=0x8000;
-  for(let i=0;i<bytes.length;i+=CH) s+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));
-  return btoa(s); }
-function b64ToBytes(b64){ const s=atob(b64); const a=new Uint8Array(s.length);
-  for(let i=0;i<s.length;i++) a[i]=s.charCodeAt(i); return a; }
-function sanitizeFile(s){ return String(s).normalize("NFKD").replace(/[^\w.-]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60) || "page"; }
-function hexToRgb(h){ const n=parseInt(h.slice(1),16); return rgb(((n>>16)&255)/255,((n>>8)&255)/255,(n&255)/255); }
-function download(bytes, name, type){
-  const url=URL.createObjectURL(new Blob([bytes],{type}));
-  const a=document.createElement("a"); a.href=url; a.download=name; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),5000);
-}
-
-/* ---------------- STEP 1: template ---------------- */
-const drop=$("#drop"), tplInput=$("#tplInput");
-drop.onclick=()=>tplInput.click();
-["dragover","dragenter"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over");}));
-["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("over");}));
-drop.addEventListener("drop",ev=>{const f=ev.dataTransfer.files[0]; if(f) loadTemplateFile(f);});
-tplInput.onchange=()=>{ if(tplInput.files[0]) loadTemplateFile(tplInput.files[0]); };
-
-async function loadTemplateFile(file){
-  if(file.type && file.type.indexOf("pdf")<0 && !/\.pdf$/i.test(file.name))
-    return tplError("That isn't a PDF. Export your design as PDF, then load it here.");
-  const buf=await file.arrayBuffer();
-  await loadTemplateBytes(new Uint8Array(buf), file.name);
-}
-async function loadTemplateBytes(bytes, name){
-  try{
-    const doc=await pdfjsLib.getDocument({data:bytes.slice()}).promise;
-    const page=await doc.getPage(1);
-    const vp=page.getViewport({scale:1});
-    state.tpl={bytes, name, wpt:vp.width, hpt:vp.height, pageCount:doc.numPages};
-    await renderPreview(page);
-  }catch(e){ return tplError("Couldn't read that PDF. Re-export it as a standard (not password-protected) PDF."); }
-  $("#p1").classList.add("done"); $("#p1note").textContent="loaded";
-  $("#tplChip").innerHTML=`<div class="filechip"><b>PDF</b> ${escapeHtml(name)}${state.tpl.pageCount>1?" · page 1 of "+state.tpl.pageCount+" used":""}<button class="x" title="remove">✕</button></div>`;
-  $("#tplChip").querySelector(".x").onclick=clearTemplate;
-  $("#sizeBlock").style.display = state.layout.mode==="grid" ? "none" : "block";
-  $("#layoutBlock").style.display="block";
-  refreshAll();
-}
-function tplError(msg){ $("#tplChip").innerHTML=`<div class="callout err">${escapeHtml(msg)}</div>`; }
-function clearTemplate(){
-  state.tpl={bytes:null,name:"",wpt:0,hpt:0,pageCount:1};
-  $("#p1").classList.remove("done"); $("#p1note").textContent="PDF template";
-  $("#tplChip").innerHTML=""; $("#sizeBlock").style.display="none";
-  $("#sheet").style.display="none"; $("#emptyMsg").style.display="block";
-  $("#proof").classList.add("empty"); refreshAll();
-}
-async function renderPreview(page){
-  const proofW=Math.min($("#proof").clientWidth-68, 660), proofH=470;
-  const scale=Math.min(proofW/state.tpl.wpt, proofH/state.tpl.hpt);
-  state.cssScale=scale; state.cssW=state.tpl.wpt*scale; state.cssH=state.tpl.hpt*scale;
-  const dpr=window.devicePixelRatio||1;
-  const vp=page.getViewport({scale:scale*dpr});
-  const cv=$("#tplCanvas");
-  cv.width=vp.width; cv.height=vp.height;
-  cv.style.width=state.cssW+"px"; cv.style.height=state.cssH+"px";
-  await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
-  $("#emptyMsg").style.display="none"; $("#sheet").style.display="block";
-  $("#proof").classList.remove("empty");
-  renderFieldLayer();
-}
-async function rerenderTemplate(){
-  if(!state.tpl.bytes) return;
-  const doc=await pdfjsLib.getDocument({data:state.tpl.bytes.slice()}).promise;
-  await renderPreview(await doc.getPage(1));
-}
-window.addEventListener("resize", ()=>{ clearTimeout(rerenderTemplate._t);
-  rerenderTemplate._t=setTimeout(rerenderTemplate, 200); });
-
-/* size override */
-$("#sizePreset").onchange=e=>{ $("#customSize").style.display=e.target.value==="custom"?"flex":"none"; refreshAll(); };
-$("#cw").oninput=$("#ch").oninput=refreshAll;
-function outSize(){
-  const p=$("#sizePreset").value, mm=(w,h)=>[w*PT_PER_MM,h*PT_PER_MM];
-  if(p==="a4l")return mm(297,210); if(p==="a4p")return mm(210,297);
-  if(p==="a3l")return mm(420,297); if(p==="ltrl")return mm(279.4,215.9);
-  if(p==="custom"){const w=+$("#cw").value||0,h=+$("#ch").value||0; if(w>0&&h>0)return mm(w,h);}
-  return [state.tpl.wpt,state.tpl.hpt];
-}
-function updateSizeReadout(){
-  if(!state.tpl.bytes) return;
-  $("#sizeDetected").textContent=`artwork ${(state.tpl.wpt/PT_PER_MM).toFixed(0)}×${(state.tpl.hpt/PT_PER_MM).toFixed(0)} mm`;
-  const [ow,oh]=outSize();
-  $("#sizeFinal").textContent=`output ${(ow/PT_PER_MM).toFixed(0)}×${(oh/PT_PER_MM).toFixed(0)} mm`;
-}
-
-/* ---- layout: one-per-page vs grid imposition ---- */
-const SHEETS={a4p:[210,297],a4l:[297,210],a3p:[297,420],a3l:[420,297],ltrp:[215.9,279.4]};
-function sheetSizePt(){ const [w,h]=SHEETS[state.layout.sheet]||SHEETS.a4p; return [w*PT_PER_MM,h*PT_PER_MM]; }
-function gridGeom(){
-  const L=state.layout, [SW,SH]=sheetSizePt();
-  const M=L.marginMm*PT_PER_MM, G=L.gapMm*PT_PER_MM;
-  const cols=Math.max(1,L.cols|0), rows=Math.max(1,L.rows|0);
-  const cellW=(SW-2*M-(cols-1)*G)/cols, cellH=(SH-2*M-(rows-1)*G)/rows;
-  const s=Math.min(cellW/state.tpl.wpt, cellH/state.tpl.hpt);
-  return {SW,SH,M,G,cols,rows,cellW,cellH,scale:s,pw:state.tpl.wpt*s,ph:state.tpl.hpt*s,perSheet:cols*rows,valid:cellW>0&&cellH>0&&s>0};
-}
-$("#layoutSeg").addEventListener("click",e=>{
-  const b=e.target.closest("button"); if(!b) return;
-  [...$("#layoutSeg").children].forEach(x=>x.setAttribute("aria-pressed",x===b));
-  state.layout.mode=b.dataset.l;
-  $("#gridOpts").style.display=state.layout.mode==="grid"?"block":"none";
-  $("#sizeBlock").style.display=state.layout.mode==="grid"?"none":"block";
-  refreshAll();
-});
-["gSheet","gCols","gRows","gMargin","gGap","gCrop"].forEach(id=>{
-  $("#"+id).addEventListener("input",()=>{
-    state.layout.sheet=$("#gSheet").value;
-    state.layout.cols=+$("#gCols").value||1; state.layout.rows=+$("#gRows").value||1;
-    state.layout.marginMm=+$("#gMargin").value||0; state.layout.gapMm=+$("#gGap").value||0;
-    state.layout.crop=$("#gCrop").checked;
-    refreshAll();
-  });
-});
-function updateGridNote(){
-  if(state.layout.mode!=="grid"||!state.tpl.bytes){ $("#gridNote").textContent=""; return; }
-  const g=gridGeom();
-  if(!g.valid){ $("#gridNote").textContent="Grid doesn't fit — reduce cols/rows or margins."; return; }
-  const n=state.rows.length, sheets=n?Math.ceil(n/g.perSheet):0;
-  $("#gridNote").textContent=
-    `${g.cols}×${g.rows} = ${g.perSheet} pieces per sheet · each piece ${(g.pw/PT_PER_MM).toFixed(0)}×${(g.ph/PT_PER_MM).toFixed(0)} mm`
-    +(n?` · ${n} pieces → ${sheets} sheet${sheets!==1?"s":""}`:"");
-}
-
-/* ---------------- STEP 2: data ---------------- */
-$("#data").oninput=()=>{ state.dataRaw=$("#data").value; parseData(); refreshAll(); };
-$("#hasHeader").onchange=()=>{ state.hasHeader=$("#hasHeader").checked; parseData(); refreshAll(); };
-
-function splitLine(line){
-  if(line.indexOf("\t")>=0) return line.split("\t").map(s=>s.trim());
-  if(line.indexOf(",")>=0){ // small CSV parser with quote support
-    const out=[]; let cur="", q=false;
-    for(let i=0;i<line.length;i++){ const c=line[i];
-      if(q){ if(c==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
-      else{ if(c==='"') q=true; else if(c===",'"[0]){ out.push(cur.trim()); cur=""; } else cur+=c; } }
-    out.push(cur.trim()); return out;
-  }
-  return [line.trim()];
-}
-function parseData(){
-  const lines=state.dataRaw.split(/\r?\n/).map(l=>l.replace(/\s+$/,"")).filter(l=>l.trim().length);
-  let rows=lines.map(splitLine);
-  state.headers=null;
-  if(state.hasHeader && rows.length){ state.headers=rows[0]; rows=rows.slice(1); }
-  state.rows=rows;
-  state.nCols=rows.reduce((m,r)=>Math.max(m,r.length), state.headers?state.headers.length:0);
-  state.previewRow=Math.min(state.previewRow, Math.max(0,rows.length-1));
-  $("#dataNote").textContent=rows.length+" rows";
-  $("#colNote").textContent=state.nCols?`${state.nCols} column${state.nCols>1?"s":""} detected`:"";
-  $("#p2").classList.toggle("done", rows.length>0);
-  refreshFieldEditor(); renderFieldLayer(); updateRowNav(); updateWarnings();
-}
-function colName(i){
-  return (state.headers && state.headers[i]) ? state.headers[i] : "Column "+(i+1);
-}
-
-/* ---------------- STEP 3: fields ---------------- */
-function addField(preset){
-  const f=Object.assign({
-    id:"f"+(fieldSeq++), type:"text", label:"Field", col:0, fontId:"helv", weight:"bold",
-    sizePt:40, color:"#16305C", align:"center", fitFrac:0.62, xFrac:0.5, yFrac:0.5,
-    imgMode:"static", imgId:null, widthFrac:0.16,
-  }, preset||{});
-  if(f.label==="Field") f.label = f.type==="image" ? "Image" : colName(f.col);
-  state.fields.push(f); state.selField=f.id;
-  renderChips(); refreshFieldEditor(); renderFieldLayer(); refreshAll();
-}
-function removeField(id){
-  state.fields=state.fields.filter(f=>f.id!==id);
-  if(state.selField===id) state.selField=state.fields.length?state.fields[state.fields.length-1].id:null;
-  renderChips(); refreshFieldEditor(); renderFieldLayer(); refreshAll();
-}
-function selectField(id){ state.selField=id; renderChips(); refreshFieldEditor(); renderFieldLayer(); }
-function curField(){ return state.fields.find(f=>f.id===state.selField)||null; }
-
-function renderChips(){
-  const c=$("#chips"); c.innerHTML="";
-  state.fields.forEach(f=>{
-    const el=document.createElement("span");
-    el.className="chip"+(f.id===state.selField?" sel":"");
-    el.innerHTML=`<span class="dot" style="color:${escapeHtml(f.color)}"></span>${escapeHtml(f.label)}<button class="del" title="remove field">✕</button>`;
-    el.onclick=e=>{ if(e.target.classList.contains("del")){ removeField(f.id); } else selectField(f.id); };
-    c.appendChild(el);
-  });
-  const add=document.createElement("span");
-  add.className="chip add"; add.textContent="+ Text field";
-  add.onclick=()=>addField({type:"text", col:Math.min(state.fields.length,Math.max(0,state.nCols-1))});
-  c.appendChild(add);
-  const addI=document.createElement("span");
-  addI.className="chip add"; addI.textContent="+ Image / photo";
-  addI.onclick=()=>addField({type:"image", label:"Image"});
-  c.appendChild(addI);
-}
-
-function refreshFieldEditor(){
-  const f=curField(); const ed=$("#fieldEditor");
-  $("#noFieldHint").style.display=f?"none":"block";
-  ed.style.display=f?"block":"none";
-  if(!f) return;
-  const isImg=f.type==="image";
-  $("#textOpts").style.display=isImg?"none":"block";
-  $("#imgOpts").style.display=isImg?"block":"none";
-  $("#colWrap").style.display=(isImg && f.imgMode==="static")?"none":"block";
-  // column select (+ serial number pseudo-column, text fields only)
-  const sel=$("#fCol"); sel.innerHTML="";
-  const n=Math.max(state.nCols,1);
-  for(let i=0;i<n;i++){ const o=document.createElement("option"); o.value=i; o.textContent=colName(i); sel.appendChild(o); }
-  if(!isImg){
-    const so=document.createElement("option"); so.value="serial"; so.textContent="Serial number · 001, 002…"; sel.appendChild(so);
-  }
-  sel.value = f.col==="serial" ? "serial" : Math.min(+f.col||0,n-1);
-  $("#serialRow").style.display = (!isImg && f.col==="serial") ? "flex" : "none";
-  $("#fPrefix").value = f.serialPrefix||"";
-  [...$("#alignSeg").children].forEach(b=>b.setAttribute("aria-pressed", b.dataset.a===f.align));
-  if(isImg){
-    [...$("#imgModeSeg").children].forEach(b=>b.setAttribute("aria-pressed", b.dataset.m===f.imgMode));
-    $("#imgStaticWrap").style.display=f.imgMode==="static"?"block":"none";
-    $("#imgRowWrap").style.display=f.imgMode==="row"?"block":"none";
-    $("#imgChip").innerHTML = f.imgId && state.assets[f.imgId]
-      ? `<div class="filechip"><b>IMG</b> ${escapeHtml(state.assets[f.imgId].name)}</div>` : "";
-    $("#poolChip").innerHTML = state.photoPool.length
-      ? `<div class="filechip"><b>${state.photoPool.length}</b> photos in the set</div>` : "";
-    $("#iwidth").value=Math.round(f.widthFrac*100); $("#iwVal").textContent=Math.round(f.widthFrac*100)+"%";
-    return;
-  }
-  // text-only controls
-  const fs=$("#fFont"); fs.innerHTML="";
-  state.fonts.forEach(ft=>{ const o=document.createElement("option"); o.value=ft.id; o.textContent=ft.label; fs.appendChild(o); });
-  fs.value=f.fontId;
-  const ft=state.fonts.find(x=>x.id===f.fontId);
-  $("#weightWrap").style.display=(ft&&ft.kind==="std")?"block":"none";
-  [...$("#weightSeg").children].forEach(b=>b.setAttribute("aria-pressed", b.dataset.w===f.weight));
-  $("#fsize").value=f.sizePt; $("#sizeVal").textContent=f.sizePt+" pt";
-  $("#fcolor").value=f.color;
-  $("#fitw").value=Math.round(f.fitFrac*100); $("#fitVal").textContent=Math.round(f.fitFrac*100)+"%";
-}
-
-$("#fCol").onchange=e=>{ const f=curField(); if(!f) return;
-  const v=e.target.value;
-  if(v==="serial"){ f.col="serial"; f.label="Serial"; }
-  else { f.col=+v; f.label=colName(f.col); }
-  refreshFieldEditor(); renderChips(); renderFieldLayer(); updateWarnings(); };
-$("#fPrefix").oninput=e=>{ const f=curField(); if(!f) return;
-  f.serialPrefix=e.target.value; renderFieldLayer(); updateWarnings(); };
-$("#fFont").onchange=e=>{ const f=curField(); if(!f) return;
-  f.fontId=e.target.value; refreshFieldEditor(); renderFieldLayer(); updateWarnings(); };
-$("#alignSeg").addEventListener("click",e=>{ const b=e.target.closest("button"); const f=curField(); if(!b||!f) return;
-  f.align=b.dataset.a;
-  // move the field where the button says: centre snaps to exact page centre,
-  // left/right snap toward the margins. Drag afterwards to fine-tune.
-  if(f.align==="center") f.xFrac=0.5;
-  else if(f.align==="left") f.xFrac=0.10;
-  else if(f.align==="right") f.xFrac=0.90;
-  refreshFieldEditor(); renderFieldLayer(); });
-$("#weightSeg").addEventListener("click",e=>{ const b=e.target.closest("button"); const f=curField(); if(!b||!f) return;
-  f.weight=b.dataset.w; refreshFieldEditor(); renderFieldLayer(); updateWarnings(); });
-$("#fsize").oninput=e=>{ const f=curField(); if(!f) return;
-  f.sizePt=+e.target.value; $("#sizeVal").textContent=f.sizePt+" pt"; renderFieldLayer(); updateWarnings(); };
-$("#fcolor").oninput=e=>{ const f=curField(); if(!f) return; f.color=e.target.value; renderChips(); renderFieldLayer(); };
-$("#fitw").oninput=e=>{ const f=curField(); if(!f) return;
-  f.fitFrac=+e.target.value/100; $("#fitVal").textContent=e.target.value+"%"; renderFieldLayer(); updateWarnings(); };
-
-/* image assets (static images + per-person photo pool) */
-async function addAsset(file){
-  const bytes=new Uint8Array(await file.arrayBuffer());
-  const url=URL.createObjectURL(new Blob([bytes],{type:file.type}));
-  const dim=await new Promise((res,rej)=>{ const im=new Image();
-    im.onload=()=>res({w:im.naturalWidth,h:im.naturalHeight});
-    im.onerror=()=>rej(new Error("unreadable image")); im.src=url; });
-  const id="a"+(assetSeq++);
-  state.assets[id]={name:file.name, bytes, url, w:dim.w, h:dim.h};
-  return id;
-}
-$("#imgUpBtn").onclick=()=>$("#imgInput").click();
-$("#imgInput").onchange=async()=>{
-  const file=$("#imgInput").files[0]; const f=curField();
-  if(!file||!f) return;
-  try{ f.imgId=await addAsset(file); }
-  catch(e){ $("#imgChip").innerHTML=`<div class="callout err">Couldn't read that image — use PNG or JPG.</div>`; return; }
-  $("#imgInput").value="";
-  refreshFieldEditor(); renderFieldLayer(); updateWarnings();
-};
-$("#poolUpBtn").onclick=()=>$("#poolInput").click();
-$("#poolInput").onchange=async()=>{
-  const files=[...$("#poolInput").files]; if(!files.length) return;
-  let ok=0;
-  for(const file of files){ try{ state.photoPool.push(await addAsset(file)); ok++; }catch(e){} }
-  $("#poolInput").value="";
-  refreshFieldEditor(); renderFieldLayer(); updateWarnings();
-};
-$("#imgModeSeg").addEventListener("click",e=>{
-  const b=e.target.closest("button"); const f=curField(); if(!b||!f) return;
-  f.imgMode=b.dataset.m; refreshFieldEditor(); renderFieldLayer(); updateWarnings();
-});
-$("#iwidth").oninput=e=>{ const f=curField(); if(!f) return;
-  f.widthFrac=+e.target.value/100; $("#iwVal").textContent=e.target.value+"%";
-  renderFieldLayer(); };
-function normName(s){ return String(s||"").trim().toLowerCase(); }
-function baseName(s){ return normName(s).replace(/\.(png|jpe?g)$/,""); }
-function matchPhoto(f,row){
-  if(f.imgMode==="static") return f.imgId;
-  const want=normName((row||[])[f.col]); if(!want) return null;
-  const wantB=baseName(want);
-  for(const id of state.photoPool){
-    const n=normName(state.assets[id].name);
-    if(n===want || baseName(n)===wantB) return id;
-  }
-  return null;
-}
-
-/* font upload */
-$("#fontUpBtn").onclick=()=>$("#fontInput").click();
-$("#fontInput").onchange=async()=>{
-  const file=$("#fontInput").files[0]; if(!file) return;
-  const bytes=new Uint8Array(await file.arrayBuffer());
-  await addCustomFont(bytes, file.name, true);
-  $("#fontInput").value="";
-};
-async function addCustomFont(bytes, name, select){
-  const id="cf"+Date.now()+Math.floor(Math.random()*999);
-  const cssName="CF_"+id;
-  try{
-    const ff=new FontFace(cssName, bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset+bytes.byteLength));
-    await ff.load(); document.fonts.add(ff);
-  }catch(e){
-    $("#fontChip").innerHTML=`<div class="callout err">Couldn't read that font file. Use a .ttf or .otf.</div>`;
-    return null;
-  }
-  const ft={id, label:name.replace(/\.(ttf|otf)$/i,""), kind:"custom", css:cssName, bytes, fileName:name};
-  state.fonts.push(ft);
-  $("#fontChip").innerHTML=`<div class="filechip"><b>FONT</b> ${escapeHtml(name)} — available in every field's font list</div>`;
-  const f=curField();
-  if(select && f){ f.fontId=id; }
-  refreshFieldEditor(); renderFieldLayer(); updateWarnings();
-  return ft;
-}
-
-/* ---------------- preview layer ---------------- */
-function valText(f, row, rowIdx){
-  if(f.col==="serial") return (f.serialPrefix||"")+String(rowIdx+1).padStart(3,"0");
-  return ((row||[])[f.col]??"").toString();
-}
-function fieldText(f){
-  const t=valText(f, state.rows[state.previewRow], state.previewRow);
-  return t!=="" ? t : "("+f.label+")";
-}
-function cssFont(f){
-  const ft=state.fonts.find(x=>x.id===f.fontId)||BUILTIN_FONTS[0];
-  const w=(ft.kind==="std" && f.weight==="bold")?"700":"400";
-  return {family:ft.css, weight:w};
-}
-function previewFitSizePx(f, text){
-  const {family,weight}=cssFont(f);
-  const basePx=f.sizePt*state.cssScale;
-  measureCtx.font=`${weight} ${basePx}px ${family}`;
-  const w=measureCtx.measureText(text).width;
-  const maxW=f.fitFrac*state.cssW;
-  return w>maxW ? Math.max(6, basePx*(maxW/w)) : basePx;
-}
-function renderFieldLayer(){
-  const layer=$("#fieldLayer"); if(!layer) return;
-  layer.innerHTML="";
-  if(!state.cssW) return;
-  if(!state.fields.length && state.tpl.bytes){
-    const h=document.createElement("div"); h.className="layerHint";
-    h.innerHTML="Add a field in step 3 —<br>it appears here, ready to drag.";
-    layer.appendChild(h); return;
-  }
-  state.fields.forEach(f=>{
-    const el=document.createElement("div");
-    el.className="fEl"+(f.id===state.selField?" sel":"");
-    let ascent=0;
-    if(f.type==="image"){
-      const aid=matchPhoto(f, state.rows[state.previewRow]);
-      const w=f.widthFrac*state.cssW;
-      if(aid && state.assets[aid]){
-        const a=state.assets[aid];
-        const im=document.createElement("img");
-        im.src=a.url; im.style.width=w+"px"; im.style.display="block"; im.draggable=false;
-        el.appendChild(im);
-        el.style.height=(w*a.h/a.w)+"px";
-      } else {
-        el.style.width=w+"px"; el.style.height=(w*0.75)+"px";
-        el.style.background="rgba(24,87,196,.06)";
-        el.style.display="grid"; el.style.placeItems="center";
-        const t=document.createElement("span");
-        t.textContent = f.imgMode==="row" ? "no photo match" : "no image yet";
-        t.style.cssText="font:9px ui-monospace,monospace;color:#5B616C";
-        el.appendChild(t);
-      }
-      const hpx=parseFloat(el.style.height)||0;
-      el.style.top=(f.yFrac*state.cssH - hpx/2)+"px";  // yFrac = vertical centre for images
-    } else {
-      const text=fieldText(f);
-      const {family,weight}=cssFont(f);
-      const px=previewFitSizePx(f,text);
-      el.textContent=text;
-      el.style.fontFamily=family; el.style.fontWeight=weight;
-      el.style.fontSize=px+"px"; el.style.color=f.color;
-      measureCtx.font=`${weight} ${px}px ${family}`;
-      const m=measureCtx.measureText(text);
-      ascent=m.actualBoundingBoxAscent||px*0.72;
-      el.style.top=(f.yFrac*state.cssH-ascent)+"px";
-    }
-    const lbl=document.createElement("span"); lbl.className="tagLbl";
-    lbl.textContent=`${f.label} · ${Math.round(f.xFrac*100)}%, ${Math.round(f.yFrac*100)}%`;
-    el.appendChild(lbl);
-    const X=f.xFrac*state.cssW;
-    el.style.left=X+"px";
-    el.style.transform= f.align==="center"?"translateX(-50%)": f.align==="right"?"translateX(-100%)":"none";
-    attachDrag(el,f);
-    layer.appendChild(el);
-    if(f.id===state.selField){
-      // the anchor crosshair: this exact point is used on EVERY certificate
-      const a=document.createElement("div"); a.className="anch"; a.dataset.for=f.id;
-      a.style.left=(X-6.5)+"px"; a.style.top=(f.yFrac*state.cssH-6.5)+"px";
-      layer.appendChild(a);
-    }
-  });
-}
-function attachDrag(el,f){
-  let d=null;
-  el.addEventListener("pointerdown",e=>{
-    // select without rebuilding the layer (a rebuild would kill this drag)
-    state.selField=f.id;
-    document.querySelectorAll(".fEl").forEach(x=>x.classList.remove("sel"));
-    el.classList.add("sel");
-    renderChips(); refreshFieldEditor();
-    d={sx:e.clientX, sy:e.clientY, x0:f.xFrac, y0:f.yFrac};
-    el.classList.add("drag"); el.setPointerCapture(e.pointerId); e.preventDefault();
-  });
-  el.addEventListener("pointermove",e=>{
-    if(!d) return;
-    f.xFrac=Math.min(1,Math.max(0, d.x0+(e.clientX-d.sx)/state.cssW));
-    f.yFrac=Math.min(1,Math.max(0, d.y0+(e.clientY-d.sy)/state.cssH));
-    positionEl(el,f);
-  });
-  ["pointerup","pointercancel"].forEach(ev=>el.addEventListener(ev,()=>{ d=null; el.classList.remove("drag"); }));
-}
-function positionEl(el,f){
-  if(f.type==="image"){
-    el.style.left=(f.xFrac*state.cssW)+"px";
-    el.style.top=(f.yFrac*state.cssH - (el.offsetHeight||0)/2)+"px";
-  } else {
-    const text=(el.firstChild && el.firstChild.nodeType===3) ? el.firstChild.nodeValue : el.textContent;
-    const {family,weight}=cssFont(f);
-    const px=parseFloat(el.style.fontSize);
-    measureCtx.font=`${weight} ${px}px ${family}`;
-    const m=measureCtx.measureText(text);
-    const ascent=m.actualBoundingBoxAscent||px*0.72;
-    el.style.left=(f.xFrac*state.cssW)+"px";
-    el.style.top=(f.yFrac*state.cssH-ascent)+"px";
-  }
-  const lbl=el.querySelector(".tagLbl");
-  if(lbl) lbl.textContent=`${f.label} · ${Math.round(f.xFrac*100)}%, ${Math.round(f.yFrac*100)}%`;
-  const a=document.querySelector('.anch[data-for="'+f.id+'"]');
-  if(a){ a.style.left=(f.xFrac*state.cssW-6.5)+"px"; a.style.top=(f.yFrac*state.cssH-6.5)+"px"; }
-}
-
-/* row navigation */
-$("#rPrev").onclick=()=>{ state.previewRow=Math.max(0,state.previewRow-1); renderFieldLayer(); updateRowNav(); };
-$("#rNext").onclick=()=>{ state.previewRow=Math.min(state.rows.length-1,state.previewRow+1); renderFieldLayer(); updateRowNav(); };
-$("#rLong").onclick=()=>{
-  if(!state.rows.length) return;
-  let best=0,bestLen=-1;
-  state.rows.forEach((r,i)=>{ const L=r.join(" ").length; if(L>bestLen){bestLen=L;best=i;} });
-  state.previewRow=best; renderFieldLayer(); updateRowNav();
-};
-function updateRowNav(){
-  const nav=$("#rownav");
-  if(!state.rows.length || !state.tpl.bytes){ nav.style.display="none"; return; }
-  nav.style.display="flex";
-  $("#rCur").textContent=`row ${state.previewRow+1} / ${state.rows.length}`;
-  $("#rPrev").disabled=state.previewRow<=0;
-  $("#rNext").disabled=state.previewRow>=state.rows.length-1;
-}
-// arrow keys page through rows (when not typing in a field)
-document.addEventListener("keydown",e=>{
-  const t=e.target.tagName;
-  if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT") return;
-  if(!state.rows.length||!state.tpl.bytes) return;
-  if(e.key==="ArrowRight"){ $("#rNext").click(); e.preventDefault(); }
-  else if(e.key==="ArrowLeft"){ $("#rPrev").click(); e.preventDefault(); }
-});
-
-/* shrink warnings (canvas metrics ≈ good enough to flag) */
-function updateWarnings(){
-  const box=$("#warnline"); box.innerHTML="";
-  if(!state.rows.length || !state.fields.length || !state.cssW) return;
-  const flagged=[]; const noPhoto=[];
-  state.rows.forEach((row,i)=>{
-    for(const f of state.fields){
-      if(f.type==="image"){
-        if(f.imgMode==="row" && !matchPhoto(f,row) && !noPhoto.includes(i)) noPhoto.push(i);
-        continue;
-      }
-      const t=valText(f,row,i); if(!t) continue;
-      const {family,weight}=cssFont(f);
-      const basePx=f.sizePt*state.cssScale;
-      measureCtx.font=`${weight} ${basePx}px ${family}`;
-      const w=measureCtx.measureText(t).width, maxW=f.fitFrac*state.cssW;
-      if(w>maxW && basePx*(maxW/w) < basePx*0.65){ flagged.push(i); break; }
-    }
-  });
-  let html="";
-  if(noPhoto.length){
-    const list=noPhoto.slice(0,6).map(i=>"#"+(i+1)).join(", ")+(noPhoto.length>6?" …":"");
-    html+=`<div class="callout warn">${noPhoto.length} row${noPhoto.length>1?"s":""} have no matching photo (${list}) — check file names against the column.</div>`;
-  }
-  if(flagged.length){
-    const list=flagged.slice(0,6).map(i=>"#"+(i+1)).join(", ")+(flagged.length>6?" …":"");
-    html+=`<div class="callout warn">${flagged.length} row${flagged.length>1?"s":""} shrink noticeably to fit (${list}). Use ‹ › to proof them, widen the fit limit, or shorten the value.</div>`;
-  }
-  box.innerHTML = html || `<div class="callout good">All values fit comfortably at their set sizes.</div>`;
-}
-
-/* ---------------- generation ---------------- */
-function stdEnum(fontId, weight){
-  const b=weight==="bold";
-  if(fontId==="times") return b?StandardFonts.TimesRomanBold:StandardFonts.TimesRoman;
-  if(fontId==="cour") return b?StandardFonts.CourierBold:StandardFonts.Courier;
-  return b?StandardFonts.HelveticaBold:StandardFonts.Helvetica;
-}
-async function embedFieldFonts(doc){
-  // one embedded font per unique (fontId, weight-for-std) needed
-  const map=new Map(); let usedFontkit=false;
-  for(const f of state.fields){
-    const ft=state.fonts.find(x=>x.id===f.fontId)||BUILTIN_FONTS[0];
-    const key=ft.kind==="std" ? ft.id+"|"+f.weight : ft.id;
-    if(map.has(key)){ f._fkey=key; continue; }
-    if(ft.kind==="custom"){
-      if(!usedFontkit){ doc.registerFontkit(fontkit); usedFontkit=true; }
-      map.set(key, await doc.embedFont(ft.bytes, {subset:true}));
-    } else {
-      map.set(key, await doc.embedFont(stdEnum(ft.id, f.weight)));
-    }
-    f._fkey=key;
-  }
-  return map;
-}
-function isPng(b){ return b[0]===0x89&&b[1]===0x50; }
-async function embedNeededImages(doc, rowIdxs){
-  // one embedded object per unique asset used by these rows
-  const map=new Map();
-  for(const f of state.fields){
-    if(f.type!=="image") continue;
-    for(const i of rowIdxs){
-      const aid=matchPhoto(f, state.rows[i]);
-      if(!aid || map.has(aid)) continue;
-      const a=state.assets[aid];
-      map.set(aid, isPng(a.bytes) ? await doc.embedPng(a.bytes) : await doc.embedJpg(a.bytes));
-    }
-  }
-  return map;
-}
-function stampRow(page, row, rowIdx, fonts, images, x0, y0, pw, ph, scale){
-  for(const f of state.fields){
-    if(f.type==="image"){
-      const aid=matchPhoto(f,row); if(!aid) continue;
-      const img=images.get(aid); if(!img) continue;
-      const a=state.assets[aid];
-      const tw=pw*f.widthFrac, th=tw*a.h/a.w;
-      const X=x0+pw*f.xFrac;
-      const x=f.align==="center"?X-tw/2 : f.align==="right"?X-tw : X;
-      const y=y0+ph*(1-f.yFrac)-th/2;              // yFrac = vertical centre
-      page.drawImage(img,{x,y,width:tw,height:th});
-      continue;
-    }
-    const text=valText(f,row,rowIdx); if(!text) continue;
-    const font=fonts.get(f._fkey);
-    let size=f.sizePt*scale, w=font.widthOfTextAtSize(text,size);
-    const maxW=pw*f.fitFrac;
-    if(w>maxW){ size=Math.max(4,size*(maxW/w)); w=font.widthOfTextAtSize(text,size); }
-    const X=x0+pw*f.xFrac;
-    const x=f.align==="center"?X-w/2 : f.align==="right"?X-w : X;
-    const y=y0+ph*(1-f.yFrac);
-    page.drawText(text,{x,y,size,font,color:hexToRgb(f.color)});
-  }
-}
-function drawCropMarks(page, x0, y0, pw, ph){
-  const L=10, off=3, opts={thickness:0.6, color:rgb(0.2,0.2,0.2)};
-  const corners=[[x0,y0],[x0+pw,y0],[x0,y0+ph],[x0+pw,y0+ph]];
-  for(const [cx,cy] of corners){
-    const dx=cx===x0?-1:1, dy=cy===y0?-1:1;
-    page.drawLine({start:{x:cx+dx*off,y:cy},end:{x:cx+dx*(off+L),y:cy},...opts});
-    page.drawLine({start:{x:cx,y:cy+dy*off},end:{x:cx,y:cy+dy*(off+L)},...opts});
-  }
-}
-async function generateMerged(){
-  const out=await PDFDocument.create();
-  const fonts=await embedFieldFonts(out);
-  const tpl=await PDFDocument.load(state.tpl.bytes);
-  const emb=await out.embedPage(tpl.getPage(0));
-  if(state.layout.mode==="grid"){
-    const g=gridGeom();
-    if(!g.valid) throw new Error("Grid doesn't fit the sheet — reduce cols/rows or margins");
-    const images=await embedNeededImages(out, [...state.rows.keys()]);
-    let page=null;
-    for(let i=0;i<state.rows.length;i++){
-      const pos=i%g.perSheet;
-      if(pos===0) page=out.addPage([g.SW,g.SH]);
-      const c=pos%g.cols, r=Math.floor(pos/g.cols);
-      const x0=g.M+c*(g.cellW+g.G)+(g.cellW-g.pw)/2;
-      const yTop=g.M+r*(g.cellH+g.G)+(g.cellH-g.ph)/2;
-      const y0=g.SH-yTop-g.ph;
-      page.drawPage(emb,{x:x0,y:y0,width:g.pw,height:g.ph});
-      stampRow(page, state.rows[i], i, fonts, images, x0, y0, g.pw, g.ph, g.scale);
-      if(state.layout.crop) drawCropMarks(page,x0,y0,g.pw,g.ph);
-      if(i%8===0){ $("#progress").textContent=`building… ${i+1}/${state.rows.length}`; await new Promise(r2=>setTimeout(r2)); }
-    }
-  } else {
-    const [OW,OH]=outSize();
-    const images=await embedNeededImages(out, [...state.rows.keys()]);
-    for(let i=0;i<state.rows.length;i++){
-      const page=out.addPage([OW,OH]);
-      page.drawPage(emb,{x:0,y:0,width:OW,height:OH});
-      stampRow(page, state.rows[i], i, fonts, images, 0, 0, OW, OH, 1);
-      if(i%8===0){ $("#progress").textContent=`building… ${i+1}/${state.rows.length}`; await new Promise(r=>setTimeout(r)); }
-    }
-  }
-  return out.save();
-}
-async function buildSingleDoc(i, tpl){
-  // one piece, at artwork size in grid mode / output size in single mode
-  const doc=await PDFDocument.create();
-  const fonts=await embedFieldFonts(doc);
-  const emb=await doc.embedPage(tpl.getPage(0));
-  const [OW,OH]= state.layout.mode==="grid" ? [state.tpl.wpt,state.tpl.hpt] : outSize();
-  const page=doc.addPage([OW,OH]);
-  page.drawPage(emb,{x:0,y:0,width:OW,height:OH});
-  const images=await embedNeededImages(doc, [i]);
-  stampRow(page, state.rows[i], i, fonts, images, 0, 0, OW, OH, 1);
-  return doc.save();
-}
-function rowFileBase(i){
-  const f0=state.fields[0];
-  const v=f0?valText(f0,state.rows[i],i):"";
-  return sanitizeFile(v||("page_"+(i+1)));
-}
-async function generateZip(){
-  const zip=new JSZip(); const used=new Set();
-  const tpl=await PDFDocument.load(state.tpl.bytes); // load once
-  for(let i=0;i<state.rows.length;i++){
-    const bytes=await buildSingleDoc(i,tpl);
-    let base=rowFileBase(i), fname=base+".pdf", n=2;
-    while(used.has(fname)) fname=`${base}_${n++}.pdf`;
-    used.add(fname);
-    zip.file(fname, bytes);
-    $("#progress").textContent=`building… ${i+1}/${state.rows.length}`;
-    if(i%4===0) await new Promise(r=>setTimeout(r));
-  }
-  return zip.generateAsync({type:"uint8array"});
-}
-async function generatePngs(){
-  const zip=new JSZip(); const used=new Set();
-  const tpl=await PDFDocument.load(state.tpl.bytes);
-  const scale=Math.min(3, 1650/state.tpl.wpt); // ~1650px wide, capped
-  for(let i=0;i<state.rows.length;i++){
-    const bytes=await buildSingleDoc(i,tpl);
-    const pdoc=await pdfjsLib.getDocument({data:bytes}).promise;
-    const page=await pdoc.getPage(1);
-    const vp=page.getViewport({scale});
-    const cv=document.createElement("canvas");
-    cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
-    await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
-    const blob=await new Promise(res=>cv.toBlob(res,"image/png"));
-    let base=rowFileBase(i), fname=base+".png", n=2;
-    while(used.has(fname)) fname=`${base}_${n++}.png`;
-    used.add(fname);
-    zip.file(fname, new Uint8Array(await blob.arrayBuffer()));
-    pdoc.destroy();
-    $("#progress").textContent=`rendering… ${i+1}/${state.rows.length}`;
-  }
-  return zip.generateAsync({type:"uint8array"});
-}
-async function runGen(kind){
-  const btns=[$("#genBtn"),$("#zipBtn"),$("#pngBtn")]; btns.forEach(b=>b.disabled=true);
-  try{
-    if(kind==="pdf"){ download(await generateMerged(),"certificates.pdf","application/pdf");
-      $("#progress").textContent="done"; }
-    else if(kind==="zip"){ download(await generateZip(),"certificates-pdf.zip","application/zip");
-      $("#progress").textContent=`done · ${state.rows.length} files`; }
-    else { download(await generatePngs(),"certificates-png.zip","application/zip");
-      $("#progress").textContent=`done · ${state.rows.length} images`; }
-  }catch(e){ console.error(e);
-    $("#progress").textContent="";
-    $("#warnline").innerHTML=`<div class="callout err">Generation failed: ${escapeHtml(e.message||String(e))}. If a custom font is set, try Helvetica on that field to isolate the cause.</div>`;
-  }finally{ refreshAll(); }
-}
-$("#genBtn").onclick=()=>runGen("pdf");
-$("#zipBtn").onclick=()=>runGen("zip");
-$("#pngBtn").onclick=()=>runGen("png");
-
-/* ---------------- project save / load ---------------- */
-$("#saveProj").onclick=()=>{
-  const proj={ app:"certificate-press", v:2,
-    tpl: state.tpl.bytes?{name:state.tpl.name,b64:bytesToB64(state.tpl.bytes)}:null,
-    fonts: state.fonts.filter(f=>f.kind==="custom").map(f=>({fileName:f.fileName||f.label+".ttf", b64:bytesToB64(f.bytes), oldId:f.id})),
-    fields: state.fields.map(f=>({...f,_fkey:undefined})),
-    assets: Object.fromEntries(Object.entries(state.assets).map(([id,a])=>[id,{name:a.name,b64:bytesToB64(a.bytes)}])),
-    photoPool: [...state.photoPool],
-    dataRaw: state.dataRaw, hasHeader: state.hasHeader,
-    sizePreset: $("#sizePreset").value, cw:$("#cw").value, ch:$("#ch").value,
-    layout: {...state.layout},
-  };
-  download(new TextEncoder().encode(JSON.stringify(proj)), "certificate-press-project.json", "application/json");
-};
-$("#openProj").onclick=()=>$("#projInput").click();
-$("#projInput").onchange=async()=>{
-  const file=$("#projInput").files[0]; if(!file) return;
-  try{
-    const proj=JSON.parse(await file.text());
-    if(proj.app!=="certificate-press") throw new Error("not a Certificate Press project file");
-    await loadProject(proj);
-  }catch(e){ $("#warnline").innerHTML=`<div class="callout err">Couldn't open that project: ${escapeHtml(e.message||String(e))}</div>`; }
-  $("#projInput").value="";
-};
-async function loadProject(proj){
-  state.fields=[]; state.selField=null;
-  state.fonts=[...BUILTIN_FONTS];
-  state.assets={}; state.photoPool=[];
-  const idMap={};
-  for(const [oldId, a] of Object.entries(proj.assets||{})){
-    const bytes=b64ToBytes(a.b64);
-    const url=URL.createObjectURL(new Blob([bytes]));
-    const dim=await new Promise(res=>{ const im=new Image();
-      im.onload=()=>res({w:im.naturalWidth,h:im.naturalHeight});
-      im.onerror=()=>res({w:1,h:1}); im.src=url; });
-    const nid="a"+(assetSeq++);
-    state.assets[nid]={name:a.name, bytes, url, w:dim.w, h:dim.h};
-    idMap["asset:"+oldId]=nid;
-  }
-  state.photoPool=(proj.photoPool||[]).map(oid=>idMap["asset:"+oid]).filter(Boolean);
-  for(const f of (proj.fonts||[])){
-    const ft=await addCustomFont(b64ToBytes(f.b64), f.fileName, false);
-    if(ft && f.oldId) idMap[f.oldId]=ft.id;
-  }
-  state.dataRaw=proj.dataRaw||""; $("#data").value=state.dataRaw;
-  state.hasHeader=!!proj.hasHeader; $("#hasHeader").checked=state.hasHeader;
-  $("#sizePreset").value=proj.sizePreset||"keep";
-  $("#customSize").style.display=$("#sizePreset").value==="custom"?"flex":"none";
-  if(proj.cw)$("#cw").value=proj.cw; if(proj.ch)$("#ch").value=proj.ch;
-  if(proj.layout){ Object.assign(state.layout, proj.layout); }
-  else { Object.assign(state.layout, {mode:"single",sheet:"a4p",cols:2,rows:4,marginMm:10,gapMm:6,crop:true}); }
-  [...$("#layoutSeg").children].forEach(b=>b.setAttribute("aria-pressed", b.dataset.l===state.layout.mode));
-  $("#gridOpts").style.display=state.layout.mode==="grid"?"block":"none";
-  $("#sizeBlock").style.display=state.layout.mode==="grid"?"none":"block";
-  $("#gSheet").value=state.layout.sheet; $("#gCols").value=state.layout.cols; $("#gRows").value=state.layout.rows;
-  $("#gMargin").value=state.layout.marginMm; $("#gGap").value=state.layout.gapMm; $("#gCrop").checked=!!state.layout.crop;
-  parseData();
-  (proj.fields||[]).forEach(f=>{
-    const nf={...f}; if(idMap[nf.fontId]) nf.fontId=idMap[nf.fontId];
-    if(!state.fonts.find(x=>x.id===nf.fontId)) nf.fontId="helv";
-    if(nf.imgId) nf.imgId=idMap["asset:"+nf.imgId]||null;
-    if(!nf.type) nf.type="text";
-    nf.id="f"+(fieldSeq++);
-    state.fields.push(nf);
-  });
-  state.selField=state.fields.length?state.fields[0].id:null;
-  if(proj.tpl) await loadTemplateBytes(b64ToBytes(proj.tpl.b64), proj.tpl.name);
-  renderChips(); refreshFieldEditor(); renderFieldLayer(); updateRowNav(); updateWarnings(); refreshAll();
-}
-
-/* ---------------- sample project ---------------- */
-$("#sampleBtn").onclick=loadSample;
-async function loadSample(){
-  // build a demo A4-landscape certificate template with pdf-lib, on the fly
-  const doc=await PDFDocument.create();
-  const W=841.89,H=595.28;
-  const page=doc.addPage([W,H]);
-  const navy=rgb(0.10,0.16,0.31), gold=rgb(0.78,0.64,0.29), cream=rgb(0.99,0.985,0.96);
-  page.drawRectangle({x:0,y:0,width:W,height:H,color:cream});
-  page.drawRectangle({x:26,y:26,width:W-52,height:H-52,borderColor:navy,borderWidth:2.4});
-  page.drawRectangle({x:36,y:36,width:W-72,height:H-72,borderColor:gold,borderWidth:1.2});
-  const helv=await doc.embedFont(StandardFonts.HelveticaBold);
-  const times=await doc.embedFont(StandardFonts.TimesRomanItalic);
-  const c=(t,f,s,y,col)=>page.drawText(t,{x:W/2-f.widthOfTextAtSize(t,s)/2,y,size:s,font:f,color:col});
-  c("CERTIFICATE OF PARTICIPATION",helv,15,H-112,gold);
-  c("Pop-Up Schools 2026",await doc.embedFont(StandardFonts.TimesRomanBold),42,H-168,navy);
-  c("This certificate is proudly presented to",times,19,H-238,rgb(.35,.35,.35));
-  page.drawLine({start:{x:W/2-165,y:H-345},end:{x:W/2+165,y:H-345},thickness:1.4,color:gold});
-  page.drawLine({start:{x:150,y:110},end:{x:320,y:110},thickness:1,color:navy});
-  page.drawLine({start:{x:W-320,y:110},end:{x:W-150,y:110},thickness:1,color:navy});
-  page.drawText("Programme Director",{x:235-helv.widthOfTextAtSize("Programme Director",12)/2,y:90,size:12,font:helv,color:navy});
-  page.drawText("Date",{x:(W-235)-helv.widthOfTextAtSize("Date",12)/2,y:90,size:12,font:helv,color:navy});
-  const bytes=await doc.save();
-
-  await loadProject({
-    app:"certificate-press", v:2,
-    tpl:{name:"sample-certificate.pdf", b64:bytesToB64(new Uint8Array(bytes))},
-    fonts:[],
-    dataRaw:"Name\tWorkshop\tDate\nPriya Sharma\tEverything Is Data\t18 July 2026\nRahul Verma\tDesign for Emerging Tech\t18 July 2026\nAnanya Krishnamurthy Venkataraman\tEverything Is Data\t18 July 2026\nWei Chen\tPlayful Prototyping\t18 July 2026\nFatima Al-Mansoori\tEverything Is Data\t18 July 2026",
-    hasHeader:true, sizePreset:"keep",
-    fields:[
-      {label:"Name",col:0,fontId:"helv",weight:"bold",sizePt:34,color:"#1A2A4F",align:"center",fitFrac:0.62,xFrac:0.5,yFrac:0.52},
-      {label:"Workshop",col:1,fontId:"times",weight:"regular",sizePt:17,color:"#444444",align:"center",fitFrac:0.7,xFrac:0.5,yFrac:0.66},
-      {label:"Date",col:2,fontId:"helv",weight:"regular",sizePt:12,color:"#1A2A4F",align:"center",fitFrac:0.3,xFrac:0.723,yFrac:0.845},
-    ],
-  });
-}
-
-/* ---------------- how-it-works modal ---------------- */
-function openHow(){ $("#howModal").classList.add("open"); }
-function closeHow(){ $("#howModal").classList.remove("open"); }
-$("#howBtn").onclick=openHow;
-$("#howBtn2").onclick=openHow;
-$("#howClose").onclick=closeHow;
-$("#howModal").addEventListener("click",e=>{ if(e.target===$("#howModal")) closeHow(); });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeHow(); });
-
-/* ---------------- readiness ---------------- */
-function refreshAll(){
-  updateSizeReadout(); updateGridNote();
-  const ready=state.tpl.bytes && state.rows.length>0 && state.fields.length>0
-    && (state.layout.mode!=="grid" || gridGeom().valid);
-  $("#genBtn").disabled=!ready; $("#zipBtn").disabled=!ready; $("#pngBtn").disabled=!ready;
-  const n=state.rows.length;
-  if(state.layout.mode==="grid" && state.tpl.bytes){
-    const g=gridGeom(); const sheets=n&&g.valid?Math.ceil(n/g.perSheet):0;
-    $("#countBox").innerHTML=`<b>${n}</b> pieces · <b>${sheets}</b> sheet${sheets!==1?"s":""} of ${g.perSheet}`;
-  } else {
-    $("#countBox").innerHTML=`<b>${n}</b> personalised page${n!==1?"s":""} ready`;
-  }
-  $("#p3").classList.toggle("done", state.fields.length>0);
-  updateRowNav(); updateWarnings();
-}
-renderChips();
-refreshAll();
-</script>
+<script src="shared/kagaz.js"></script>
 </body>
 </html>

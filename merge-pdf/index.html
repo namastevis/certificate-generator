@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Merge PDF without uploading — Kagaz</title>
+<meta name="description" content="Combine PDF files into one, entirely inside your browser. Nothing is uploaded, there are no file limits, and page sizes are preserved exactly. Free and open source.">
+<link rel="canonical" href="https://kagaz.namastevis.in/merge-pdf/">
+<meta property="og:title" content="Merge PDF without uploading — Kagaz">
+<meta property="og:description" content="Combine PDFs into one, entirely in your browser. No upload, no limits.">
+<meta property="og:url" content="https://kagaz.namastevis.in/merge-pdf/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Are my PDFs uploaded anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. Kagaz has no server and no upload endpoint. The merge happens in your browser using JavaScript; you can confirm it by watching the Network tab in your browser's developer tools."}},
+{"@type":"Question","name":"Is there a limit on file size or number of files?","acceptedAnswer":{"@type":"Answer","text":"There is no artificial limit. The only ceiling is your own device's memory, since everything is processed inside the browser tab."}},
+{"@type":"Question","name":"Will merging change my page sizes?","acceptedAnswer":{"@type":"Answer","text":"No. Each page keeps its original size, orientation and rotation. A mixed set of A4 and A3 pages stays mixed."}}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../merge-pdf/" aria-current="page">Merge</a>
+      <a href="../split-pdf/">Split</a>
+      <a href="../compress-pdf/">Compress</a>
+      <a href="../pdf-to-jpg/">To JPG</a>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Merge · nothing uploaded</p>
+  <h1>Merge PDF</h1>
+  <p class="lede">
+    Combine any number of PDFs into a single file. Page sizes, orientation and rotation are
+    preserved exactly. Runs in this tab — <b>your files never leave your machine</b>.
+  </p>
+
+  <section class="panel" id="panelFiles">
+    <div class="head"><span class="step">1</span><h2>Your PDFs</h2><span class="note" id="fileNote">no files yet</span></div>
+    <div class="body">
+      <div class="drop" id="drop">
+        <span class="big">Drop PDFs here</span>
+        <span class="small">or tap to choose · add as many as you like · they merge in the order below</span>
+      </div>
+      <ul class="filelist" id="list"></ul>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelOpts" hidden>
+    <div class="head"><span class="step">2</span><h2>Options</h2></div>
+    <div class="body stack">
+      <div>
+        <label class="fld" for="outName">Output file name</label>
+        <input type="text" id="outName" value="merged.pdf" spellcheck="false">
+      </div>
+      <p class="hint">
+        Need only part of a file? Use the <b>⤢</b> button on any row to pick a page range
+        such as <code>1-3, 8, 12-</code>.
+      </p>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">Add at least two PDFs</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Merge and download</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+  <div id="result"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p>
+      That merge happened entirely on your computer — nothing was uploaded. Kagaz is free
+      and open source, built by <b>Amit Jena</b> in India.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+      <a href="../">More Kagaz tools</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>How it works</h2>
+    <p>
+      Drop your files in, drag them into the order you want, and press merge. Kagaz reads
+      each PDF with <a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>, copies the pages
+      you asked for into a new document, and hands you the result as a download. All of it
+      happens in JavaScript inside this tab.
+    </p>
+    <p>
+      Because each page is copied rather than redrawn, everything that was in the original
+      survives: text stays selectable, vector graphics stay sharp, and a mixed stack of A4
+      portrait and A3 landscape pages stays exactly as it was.
+    </p>
+
+    <h2>Common questions</h2>
+    <h3>Are my files uploaded?</h3>
+    <p>
+      No. There is no server to upload to. If you would rather verify than trust, open your
+      browser's developer tools, go to the Network tab, and merge a file — you will see no
+      requests go out.
+    </p>
+    <h3>Is there a limit?</h3>
+    <p>
+      No artificial one. The real ceiling is your device's memory, because the whole job is
+      held in the tab. A laptop handles a few hundred megabytes comfortably; a phone will
+      want to stay well under that, and Kagaz warns you when a job looks too big.
+    </p>
+    <h3>What about password-protected PDFs?</h3>
+    <p>
+      Kagaz refuses them rather than producing a broken file. Open the PDF in any reader,
+      save an unprotected copy, and merge that.
+    </p>
+    <h3>Does it work offline?</h3>
+    <p>
+      Yes. Once this page has loaded, you can disconnect entirely and keep merging. The PDF
+      libraries are served from this site, not a CDN, precisely so that this is true.
+    </p>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../split-pdf/">Split PDF</a> — extract a range, or break one file into many</li>
+      <li><a href="../compress-pdf/">Compress PDF</a> — shrink images, keep text as text</li>
+      <li><a href="../pdf-to-jpg/">PDF to JPG</a> — pages as images at any resolution</li>
+      <li><a href="../certificate/">Certificate Press</a> — one design, many names</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../contribute/">Contribute</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+  var files = [];
+
+  var listEl = K.$('#list'), countEl = K.$('#count'), noteEl = K.$('#fileNote');
+  var goBtn = K.$('#go'), clearBtn = K.$('#clear'), progEl = K.$('#prog');
+  var msgEl = K.$('#msg'), fileMsgEl = K.$('#fileMsg'), resultEl = K.$('#result');
+  var optsPanel = K.$('#panelOpts');
+
+  K.dropzone(K.$('#drop'), {
+    accept: '.pdf,application/pdf',
+    multiple: true,
+    match: K.isPdf,
+    onFiles: function (added) {
+      added.forEach(function (f) { files.push({ file: f, name: f.name, size: f.size, range: '' }); });
+      render();
+    }
+  });
+
+  function move(i, delta) {
+    var j = i + delta;
+    if (j < 0 || j >= files.length) return;
+    var tmp = files[i]; files[i] = files[j]; files[j] = tmp;
+    render();
+  }
+
+  function askRange(i) {
+    var current = files[i].range || '';
+    var answer = window.prompt(
+      'Which pages of “' + files[i].name + '”?\n\n' +
+      'Examples:  1-3     ·     2, 5, 9     ·     4-     ·     odd\n' +
+      'Leave empty for every page.', current);
+    if (answer === null) return;
+    files[i].range = answer.trim();
+    render();
+  }
+
+  function render() {
+    listEl.innerHTML = '';
+    var total = 0;
+
+    files.forEach(function (item, i) {
+      total += item.size;
+      var li = K.el('li', { class: 'fileitem' });
+      li.appendChild(K.el('span', { class: 'idx', text: String(i + 1) }));
+
+      var meta = K.el('div', { class: 'meta' });
+      meta.appendChild(K.el('div', { class: 'nm', text: item.name, title: item.name }));
+      meta.appendChild(K.el('div', {
+        class: 'sz',
+        text: K.bytes(item.size) + (item.range ? ' · pages ' + item.range : '')
+      }));
+      li.appendChild(meta);
+
+      var ctl = K.el('div', { class: 'ctl' });
+      ctl.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Move up', 'aria-label': 'Move ' + item.name + ' up',
+        disabled: i === 0 ? 'disabled' : null, onclick: function () { move(i, -1); }, text: '↑'
+      }));
+      ctl.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Move down', 'aria-label': 'Move ' + item.name + ' down',
+        disabled: i === files.length - 1 ? 'disabled' : null, onclick: function () { move(i, 1); }, text: '↓'
+      }));
+      ctl.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Choose pages', 'aria-label': 'Choose pages from ' + item.name,
+        onclick: function () { askRange(i); }, text: '⤢'
+      }));
+      ctl.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Remove', 'aria-label': 'Remove ' + item.name,
+        onclick: function () { files.splice(i, 1); render(); }, text: '×'
+      }));
+      li.appendChild(ctl);
+      listEl.appendChild(li);
+    });
+
+    noteEl.textContent = files.length ? files.length + ' file' + (files.length > 1 ? 's' : '') + ' · ' + K.bytes(total) : 'no files yet';
+    countEl.innerHTML = files.length
+      ? '<b>' + files.length + '</b> file' + (files.length > 1 ? 's' : '') + ' · ' + K.bytes(total)
+      : 'Add at least two PDFs';
+    goBtn.disabled = files.length < 1;
+    clearBtn.disabled = files.length === 0;
+    optsPanel.hidden = files.length === 0;
+    K.$('#panelFiles').classList.toggle('done', files.length > 0);
+
+    var warn = K.sizeWarning(total);
+    K.say(fileMsgEl, 'warn', warn);
+  }
+
+  clearBtn.addEventListener('click', function () {
+    files = [];
+    render();
+    K.say(msgEl, '', null);
+    resultEl.innerHTML = '';
+  });
+
+  goBtn.addEventListener('click', async function () {
+    goBtn.disabled = true;
+    clearBtn.disabled = true;
+    resultEl.innerHTML = '';
+    K.say(msgEl, 'info', 'Reading files…');
+    var bar = K.progress(progEl);
+
+    try {
+      var items = [];
+      for (var i = 0; i < files.length; i++) {
+        bar.set((i / files.length) * 0.4);
+        items.push({
+          name: files[i].name,
+          bytes: await K.read(files[i].file),
+          range: files[i].range || null
+        });
+        await K.tick();
+      }
+
+      K.say(msgEl, 'info', 'Merging…');
+      var out = await ops.merge(items, {
+        onProgress: function (frac) { bar.set(0.4 + frac * 0.55); }
+      });
+
+      bar.set(1);
+      var name = (K.$('#outName').value || 'merged.pdf').replace(/[\\/:*?"<>|]+/g, '_');
+      if (!/\.pdf$/i.test(name)) name += '.pdf';
+
+      K.say(msgEl, 'good', 'Merged ' + out.report.length + ' files into ' + out.pages + ' pages — ' + K.bytes(out.bytes.length) + '.');
+      showReport(out);
+      K.download(out.bytes, name);
+
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      goBtn.disabled = files.length < 1;
+      clearBtn.disabled = files.length === 0;
+    }
+  });
+
+  function showReport(out) {
+    var box = K.el('div', { class: 'result' });
+    var figs = K.el('div', { class: 'figures' });
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b>' + out.pages + '</b>pages' }));
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b>' + K.bytes(out.bytes.length) + '</b>output' }));
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b>' + out.report.length + '</b>files in' }));
+    box.appendChild(figs);
+
+    var table = K.el('table', { class: 'report' });
+    table.appendChild(K.el('tr', {}, [K.el('th', { text: 'File' }), K.el('th', { text: 'Pages used' })]));
+    out.report.forEach(function (r) {
+      table.appendChild(K.el('tr', {}, [
+        K.el('td', { text: r.name }),
+        K.el('td', { text: r.pages + ' of ' + r.of })
+      ]));
+    });
+    box.appendChild(table);
+    resultEl.appendChild(box);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

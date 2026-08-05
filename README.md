@@ -1,98 +1,125 @@
-# Certificate Press
+# कागज़ Kagaz
 
-**One design × many names → print-ready files.** Put names — and any other
-changing details — onto your own artwork: certificates, name badges, place
-cards, invitations, tickets, ID cards. Runs **entirely in your browser**.
-No accounts, no uploads, no servers. Made with ❤️ in India · works even when
-the WiFi doesn't.
+**Paper tools that never leave your browser.**
 
-![How Certificate Press works](flow.svg)
+Merge, split, compress and convert PDFs — and batch-personalise certificates — entirely on
+your own machine. Nothing is uploaded, because there is no server. No accounts, no daily
+task limits, no file size caps beyond what your device can hold, no trackers, no ads.
 
-## Features
+Live at **[kagaz.namastevis.in](https://kagaz.namastevis.in)** · MIT licensed · made in India
 
-### Your artwork
-- Load **any design as a PDF** — export from Illustrator, Canva, Figma,
-  InDesign… Leave the personalised spots blank; the app draws on top.
-- Any page size. Detected size shown in mm, with **override presets**
-  (A4/A3/Letter, portrait/landscape) or fully custom dimensions.
-- Multi-page PDFs use page 1.
+---
 
-### Your data
-- **Paste straight from a spreadsheet** — one person per line; tab-separated
-  columns (a normal spreadsheet paste) and CSV both parse automatically.
-- Optional **heading row** that names your columns throughout the app.
-- Live row and column counts as you paste.
+## The tools
 
-### Fields
-- **Unlimited fields** — Name, Workshop, Date, Seat, ID… each reads one column.
-- **Serial numbers** — any field can auto-number (001, 002…) with an optional
-  prefix like `CIID-`, no data column needed.
-- **Image fields** — place a signature, stamp, or logo (same on every page), or
-  **per-person photos for ID cards**: upload a photo set and a data column with
-  each person's file name matches them automatically; unmatched rows are
-  flagged. PNG (with transparency) and JPG supported, width adjustable.
-- **Fonts**: three built-ins (Helvetica, Times, Courier) plus **upload your own
-  .ttf/.otf** — uploaded fonts are embedded into the PDFs and available to
-  every field.
-- Per-field **weight, size, colour**, and **left / centre / right** alignment
-  (the buttons snap the field to that part of the page — drag to fine-tune).
-- **Auto-shrink**: set how wide each field may run; longer values scale down
-  gracefully, shorter ones stay at full size.
+| | | |
+|---|---|---|
+| **[Merge PDF](https://kagaz.namastevis.in/merge-pdf/)** | Join files into one | Page size, orientation and rotation preserved exactly |
+| **[Split PDF](https://kagaz.namastevis.in/split-pdf/)** | Extract or break apart | By range, every N pages, one per page, or at uneven breakpoints |
+| **[Compress PDF](https://kagaz.namastevis.in/compress-pdf/)** | Shrink the file | Downsamples embedded images and **leaves text as text** |
+| **[PDF to JPG](https://kagaz.namastevis.in/pdf-to-jpg/)** | Pages as images | You choose the dpi — 72 for screen, 300 for print |
+| **[Certificate Press](https://kagaz.namastevis.in/certificate/)** | One design × many names | Certificates, badges, place cards, tickets, ID cards |
 
-### Live proofing
-- Drag each field into place on a live preview of your artwork; a crosshair
-  marks the anchor and a readout shows the exact position. **One placement
-  applies to every page.**
-- **Flip through every row** with on-screen arrows or your keyboard's ← → keys;
-  a **"longest"** button jumps straight to the worst-case entry.
-- Automatic **shrink warnings** list the rows that scale down noticeably, so
-  surprises surface before printing.
-- A one-click **sample project** demonstrates the whole workflow.
+## Why it works this way
 
-### Layout
-- **One per page** — classic certificates.
-- **Grid per sheet (badge mode)** — lay out multiple pieces per sheet for
-  badges, place cards, and labels: choose sheet size, columns, rows, margin,
-  and gap; get **crop marks** for cutting; the piece size and sheet count
-  update live (e.g. *2×4 = 8 per sheet · 40 pieces → 5 sheets*).
+Every other free PDF site uploads your file to a company's servers. That is fine for a
+restaurant menu and not fine for a signed contract, a medical report, a bank statement or a
+scan of somebody's ID — which is exactly what people put through these tools.
 
-### Export (three ways)
-- **One merged PDF** — every person, ready for the printer.
-- **ZIP of individual PDFs** — one file per person, named automatically
-  (`Priya_Sharma.pdf`), duplicates handled.
-- **ZIP of PNG images** — one picture per person (~1650 px wide), perfect for
-  WhatsApp or LinkedIn. Rendered from the actual PDFs, so they match print
-  exactly.
+Doing the work in the browser removes the problem rather than promising to be careful with
+it. It also means running a job costs nothing, so there is no reason to meter it.
 
-### Projects
-- **Save project** bundles artwork, uploaded fonts, data, and every placement
-  into a single file; **Open project** restores it exactly. Perfect for
-  recurring events.
+## What it deliberately does not do
 
-### Private by design
-- 100% client-side: names and artwork **never leave your machine**.
-- Fully self-contained (libraries live in `vendor/`) — no CDNs, no tracking,
-  and it **works offline** once loaded.
+- **No PDF to Word.** It cannot be done well client-side. Every free tool offering it is
+  sending your document somewhere.
+- **No password cracking.** Encrypted files are refused, not guessed at.
+- **No silent degradation.** When an image cannot be safely re-encoded — CMYK, JPEG 2000,
+  JBIG2, CCITT fax, indexed colour — it is left alone and reported, rather than corrupted
+  to make a compression percentage look better.
 
-## Run it / host it
+## Compression, specifically
 
-**Locally:** just open `index.html` in a browser.
+The default mode walks every image XObject in the document, downsamples anything larger
+than the target resolution, re-encodes it as JPEG and swaps it back **in place**. Text,
+vector graphics, links and bookmarks are untouched, so the result is still selectable and
+searchable. Typical saving on an image-heavy document is 50–90%.
 
-**GitHub Pages:**
-1. Put these files at the **root** of a repo (keep `vendor/` beside `index.html`).
-2. **Settings → Pages → Deploy from a branch → main → /(root)**.
-3. Share the URL.
+There is also a lossless structural mode, and an optional flatten mode that turns pages
+into pictures — which destroys text and says so, in a confirmation dialog, before it does.
 
-## Printing
+## Running it
 
-Print at **100% / Actual size** — never "fit to page", which rescales artwork.
-In badge mode, cut along the crop marks.
+**Locally**
+
+```bash
+git clone https://github.com/namastevis/kagaz.git
+cd kagaz
+python3 -m http.server 8000    # any static server; pdf.js needs a real origin for its worker
+```
+
+**Hosting** — it is a static site. Put it on GitHub Pages, Cloudflare Pages, Netlify or a
+folder on any web server. See [DEPLOY.md](DEPLOY.md) for the DNS and redirect notes.
+
+## Layout
+
+```
+index.html            landing page
+merge-pdf/            one tool, one self-contained HTML file
+split-pdf/
+compress-pdf/
+pdf-to-jpg/
+certificate/          Certificate Press
+contribute/           how to help, and where to send a chai
+test/                 in-browser test bench
+shared/kagaz.css      one stylesheet for every page
+shared/kagaz.js       browser helpers — drop zones, downloads, canvas codec, messages
+shared/ops.js         the PDF logic, deliberately DOM-free so Node can test it
+vendor/               pdf-lib, pdf.js, JSZip, fontkit — vendored, never a CDN
+tests/stress.mjs      throws deliberately broken PDFs at shared/ops.js
+```
+
+No framework, no bundler, no build step. Clone it and open a file.
+
+## Tests
+
+```bash
+node tests/stress.mjs
+```
+
+61 checks covering malformed input, hostile filenames, page-range parsing, merge and split
+correctness, compression safety and extreme documents. Every one asserts that Kagaz either
+works or **refuses cleanly with a message a person could act on** — a crash, a hang or a
+silently broken output file is a failure.
+
+`sharp` is picked up automatically if it happens to be installed, which exercises the real
+pixel path; without it a stub codec still covers every branch. Neither is required.
+
+Then open [`/test/`](https://kagaz.namastevis.in/test/) in a browser for the parts Node
+cannot reach: the canvas codec, `createImageBitmap`, blob encoding and rendering.
 
 ## Under the hood
 
-`pdf.js` renders the live proof · `pdf-lib` + `fontkit` embed fonts and stamp
-each row onto the template · `JSZip` packs individual files. All in-browser.
+[pdf-lib](https://github.com/Hopding/pdf-lib) reads and writes documents ·
+[pdf.js](https://mozilla.github.io/pdf.js/) renders pages ·
+[JSZip](https://stuk.github.io/jszip/) packs multi-file output ·
+[fontkit](https://github.com/foliojs/fontkit) embeds uploaded fonts in Certificate Press.
+All vendored — a CDN would quietly break the offline promise.
 
-## License
+## Contributing
 
-MIT — see [LICENSE](LICENSE). Use it, fork it, remix it.
+Please do. There is a list of scoped, genuinely useful things to build at
+[/contribute](https://kagaz.namastevis.in/contribute/), and the rules are in
+[CONTRIBUTING.md](CONTRIBUTING.md). Translations into Indian languages are as welcome as code.
+
+## Support
+
+Kagaz is free and will stay free. If it saved you an evening, you can
+[buy me a chai](https://razorpay.me/@namastevis).
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). Use it, fork it, remix it, ship it commercially.
+
+Built by [Amit Jena](https://namastevis.in) · [GitHub](https://github.com/namastevis) ·
+[LinkedIn](https://linkedin.com/in/namastevis)

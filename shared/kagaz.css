@@ -1,0 +1,312 @@
+/*!
+ * Kagaz — shared stylesheet.
+ * Mobile-first. Inherits the Certificate Press design language:
+ * paper stock, ink, one blue, hairline rules, mono for labels.
+ * MIT © namastevis
+ */
+
+:root{
+  --paper:#F1F2EE; --card:#FFFFFF; --ink:#14171D; --ink-soft:#5B616C;
+  --line:#DCDED7; --line-strong:#C4C7BE;
+  --blue:#1857C4; --blue-deep:#0E3A8C; --blue-wash:#EAF0FB;
+  --reg:#D23B36; --ok:#1B7A43; --warn:#8a3a10;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --tap:44px;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{margin:0}
+body{
+  background:var(--paper); color:var(--ink); font-family:var(--sans);
+  font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  overflow-wrap:break-word;
+}
+img,svg{max-width:100%; height:auto}
+a{color:var(--blue-deep)}
+a:hover{color:var(--blue)}
+:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+
+.wrap{max-width:1120px; margin:0 auto; padding:18px 16px 80px}
+.narrow{max-width:760px}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+
+/* ---------------------------------------------------------------- masthead */
+
+.mast{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  border-bottom:2px solid var(--ink); padding-bottom:12px; margin-bottom:18px;
+}
+.brand{
+  display:flex; align-items:baseline; gap:8px; margin:0;
+  font-size:22px; font-weight:800; letter-spacing:-.02em; text-decoration:none; color:var(--ink);
+}
+.brand .dev{font-weight:700; color:var(--blue)}
+.brand .lat{font-weight:800}
+.brand small{
+  font-family:var(--mono); font-size:10px; font-weight:400; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft);
+}
+.mast nav{margin-left:auto; display:flex; gap:4px; flex-wrap:wrap}
+.mast nav a{
+  font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.12em;
+  color:var(--ink-soft); text-decoration:none; padding:9px 8px; border-radius:2px;
+}
+.mast nav a:hover{color:var(--blue-deep); background:var(--blue-wash)}
+.mast nav a[aria-current]{color:var(--ink); font-weight:700}
+.mast nav .sep{width:1px; background:var(--line-strong); margin:8px 6px}
+
+/* ------------------------------------------------------------------- hero */
+
+.eyebrow{
+  font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.18em;
+  color:var(--ink-soft); margin:0 0 10px;
+}
+h1{font-size:30px; line-height:1.15; letter-spacing:-.025em; margin:0 0 12px; font-weight:800}
+.lede{font-size:17px; color:#2c313a; margin:0 0 18px; max-width:62ch}
+.lede b{font-weight:700; color:var(--ink)}
+.sub{font-family:var(--mono); font-size:12px; color:var(--ink-soft); letter-spacing:.03em; margin:0 0 22px}
+
+@media (min-width:700px){
+  .wrap{padding:26px 22px 90px}
+  h1{font-size:40px}
+  .brand{font-size:25px}
+}
+
+/* ------------------------------------------------------------- proof strip */
+
+.proofstrip{
+  border:1px solid var(--line); border-left:3px solid var(--blue); background:var(--card);
+  border-radius:2px; padding:13px 15px; margin:0 0 26px;
+  font-family:var(--mono); font-size:12.5px; line-height:1.7; color:var(--ink-soft);
+}
+.proofstrip b{color:var(--ink)}
+
+/* ------------------------------------------------------------------- cards */
+
+.tools{display:grid; gap:12px; grid-template-columns:1fr; margin:0 0 12px}
+@media (min-width:620px){ .tools{grid-template-columns:1fr 1fr} }
+@media (min-width:960px){ .tools{grid-template-columns:1fr 1fr 1fr} }
+
+.tool{
+  display:block; background:var(--card); border:1px solid var(--line); border-radius:2px;
+  padding:15px 16px 16px; text-decoration:none; color:inherit; transition:border-color .15s, transform .15s;
+  min-height:var(--tap);
+}
+.tool:hover{border-color:var(--blue); transform:translateY(-1px)}
+.tool h3{margin:0 0 5px; font-size:16px; font-weight:700; letter-spacing:-.01em}
+.tool h3 .arrow{color:var(--blue); font-weight:400}
+.tool p{margin:0; font-size:13.5px; color:var(--ink-soft); line-height:1.5}
+.tool .kicker{
+  display:block; font-family:var(--mono); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--blue); margin-bottom:7px;
+}
+.tool.soon{border-style:dashed; background:transparent}
+.tool.soon:hover{transform:none}
+.tool.soon .kicker{color:var(--ink-soft)}
+.tool.soon h3{color:var(--ink-soft)}
+
+/* ------------------------------------------------------------- tool panels */
+
+.panel{background:var(--card); border:1px solid var(--line); border-radius:2px; margin-bottom:14px}
+.panel > .head{
+  display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap;
+}
+.panel > .head h2{font-size:14px; margin:0; font-weight:700}
+.step{
+  font-family:var(--mono); font-size:11px; font-weight:700; color:#fff; background:var(--ink);
+  width:22px; height:22px; display:grid; place-items:center; border-radius:2px; flex:0 0 auto;
+}
+.panel.done .step{background:var(--blue)}
+.head .note{margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--ink-soft)}
+.panel > .body{padding:14px}
+
+label.fld,.fldlabel{
+  display:block; font-family:var(--mono); font-size:11px; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--ink-soft); margin:0 0 6px;
+}
+.row{display:flex; gap:10px; flex-wrap:wrap}
+.row > *{flex:1 1 160px; min-width:0}
+.stack > * + *{margin-top:14px}
+
+input[type=text],input[type=number],select,textarea{
+  width:100%; font-family:var(--sans); font-size:16px; color:var(--ink); background:#fff;
+  border:1px solid var(--line-strong); border-radius:2px; padding:10px 11px; min-height:var(--tap);
+}
+textarea{min-height:110px; resize:vertical; font-family:var(--mono); font-size:14px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--blue); outline-offset:-1px}
+input[type=range]{width:100%; accent-color:var(--blue); height:var(--tap)}
+
+.drop{
+  border:1.5px dashed var(--line-strong); border-radius:3px; background:#fbfbf9;
+  padding:26px 16px; text-align:center; cursor:pointer; transition:.15s; min-height:120px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+}
+.drop:hover,.drop.over{border-color:var(--blue); background:var(--blue-wash)}
+.drop .big{font-weight:700; font-size:15px}
+.drop .small{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); line-height:1.6}
+
+/* file list — buttons rather than drag alone, so it works on a phone */
+.filelist{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:8px}
+.fileitem{
+  display:flex; align-items:center; gap:9px; background:#fbfbf9;
+  border:1px solid var(--line); border-radius:2px; padding:9px 10px;
+}
+.fileitem .idx{
+  font-family:var(--mono); font-size:11px; color:#fff; background:var(--ink-soft);
+  width:20px; height:20px; border-radius:2px; display:grid; place-items:center; flex:0 0 auto;
+}
+.fileitem .meta{min-width:0; flex:1}
+.fileitem .nm{font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.fileitem .sz{font-family:var(--mono); font-size:11px; color:var(--ink-soft)}
+.fileitem .sz.bad{color:var(--reg)}
+.fileitem .ctl{display:flex; gap:2px; flex:0 0 auto}
+.iconbtn{
+  border:1px solid var(--line-strong); background:#fff; border-radius:2px;
+  width:36px; height:36px; min-width:36px; cursor:pointer; font-size:14px; color:var(--ink-soft);
+  display:grid; place-items:center; padding:0;
+}
+.iconbtn:hover:not(:disabled){border-color:var(--blue); color:var(--blue)}
+.iconbtn:disabled{opacity:.3; cursor:default}
+
+.seg{display:flex; border:1px solid var(--line-strong); border-radius:2px; overflow:hidden; flex-wrap:wrap}
+.seg button{
+  flex:1 1 auto; border:none; background:#fff; padding:11px 8px; font-family:var(--mono);
+  font-size:12px; cursor:pointer; color:var(--ink-soft); border-right:1px solid var(--line);
+  min-height:var(--tap);
+}
+.seg button:last-child{border-right:none}
+.seg button[aria-pressed=true]{background:var(--ink); color:#fff}
+
+.btn{
+  font-family:var(--sans); font-weight:700; font-size:15px; border:none; border-radius:2px;
+  padding:12px 20px; cursor:pointer; letter-spacing:-.01em; min-height:var(--tap);
+}
+.btn.primary{background:var(--blue); color:#fff}
+.btn.primary:hover:not(:disabled){background:var(--blue-deep)}
+.btn.ghost{background:#fff; color:var(--ink); border:1px solid var(--line-strong)}
+.btn.ghost:hover:not(:disabled){border-color:var(--blue); color:var(--blue-deep)}
+.btn:disabled{background:#b7bec9 !important; color:#fff !important; cursor:not-allowed; border-color:transparent !important}
+
+.bar{
+  position:sticky; bottom:0; z-index:5; margin-top:16px; background:var(--card);
+  border:1px solid var(--line); border-top:2px solid var(--ink); border-radius:2px;
+  padding:12px 14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.bar .count{font-family:var(--mono); font-size:12px; color:var(--ink-soft); flex:1 1 140px}
+.bar .count b{color:var(--ink); font-size:15px}
+.bar .btn{flex:1 1 auto}
+@media (min-width:620px){ .bar .btn{flex:0 0 auto} }
+
+/* progress + messages */
+.prog{height:3px; background:var(--line); border-radius:2px; overflow:hidden; margin-top:10px}
+.prog i{display:block; height:100%; width:0; background:var(--blue); transition:width .2s}
+.callout{
+  font-family:var(--mono); font-size:12px; border-radius:2px; padding:10px 12px;
+  margin-top:12px; line-height:1.6;
+}
+.callout.warn{color:var(--warn); background:#fdf1e7; border:1px solid #f0d3ba}
+.callout.err{color:#8a1410; background:#fdeceb; border:1px solid #f2c4c1}
+.callout.good{color:var(--ok); background:#eaf6ee; border:1px solid #cfe6d7}
+.callout.info{color:var(--ink-soft); background:#f6f6f3; border:1px solid var(--line)}
+.callout ul{margin:6px 0 0; padding-left:18px}
+.hint{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); margin-top:8px; line-height:1.6}
+
+/* result readout */
+.result{border:1px solid var(--line); border-radius:2px; background:#fbfbf9; padding:14px; margin-top:14px}
+.figures{display:flex; gap:18px; flex-wrap:wrap; align-items:baseline; margin-bottom:10px}
+.fig{font-family:var(--mono); font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.1em}
+.fig b{display:block; font-family:var(--sans); font-size:22px; letter-spacing:-.02em; color:var(--ink); text-transform:none}
+.fig b.win{color:var(--ok)}
+table.report{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:11.5px; margin-top:8px}
+table.report th,table.report td{text-align:left; padding:5px 8px 5px 0; border-bottom:1px solid var(--line)}
+table.report th{color:var(--ink-soft); text-transform:uppercase; letter-spacing:.1em; font-size:10px; font-weight:400}
+
+/* thumbnails for pdf-to-jpg */
+.thumbs{display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); margin-top:12px}
+.thumb{border:1px solid var(--line); background:#fff; padding:6px; border-radius:2px; text-align:center}
+.thumb img{display:block; width:100%; height:auto; border:1px solid var(--line)}
+.thumb span{font-family:var(--mono); font-size:10px; color:var(--ink-soft); display:block; margin-top:5px}
+
+/* --------------------------------------------------------------- long copy */
+
+.prose{max-width:68ch; margin-top:44px}
+.prose h2{
+  font-size:13px; font-family:var(--mono); text-transform:uppercase; letter-spacing:.14em;
+  color:var(--ink-soft); font-weight:400; border-bottom:1px solid var(--line-strong);
+  padding-bottom:8px; margin:36px 0 16px;
+}
+.prose h3{font-size:17px; margin:22px 0 6px; letter-spacing:-.01em}
+.prose p{margin:0 0 14px}
+.prose ul,.prose ol{margin:0 0 14px; padding-left:20px}
+.prose li{margin-bottom:6px}
+.prose code{font-family:var(--mono); font-size:.88em; background:#e9eae4; padding:1px 5px; border-radius:2px}
+.prose pre{
+  font-family:var(--mono); font-size:12.5px; background:var(--ink); color:#e8eaee;
+  padding:13px 15px; border-radius:2px; overflow-x:auto; line-height:1.6;
+}
+.prose pre code{background:none; padding:0; color:inherit}
+
+/* who made this */
+.who{
+  background:var(--card); border:1px solid var(--line); border-left:3px solid var(--ink);
+  border-radius:2px; padding:18px; margin-top:44px;
+}
+.who h2{font-size:17px; margin:0 0 8px; letter-spacing:-.01em; border:none; padding:0; font-family:var(--sans); text-transform:none; color:var(--ink); font-weight:700}
+.who p{margin:0 0 12px; font-size:15px; color:#2c313a}
+.who .links{display:flex; gap:6px; flex-wrap:wrap}
+.who .links a{
+  font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.1em;
+  border:1px solid var(--line-strong); border-radius:2px; padding:9px 11px;
+  text-decoration:none; color:var(--ink); min-height:var(--tap); display:inline-flex; align-items:center;
+}
+.who .links a:hover{border-color:var(--blue); color:var(--blue-deep); background:var(--blue-wash)}
+
+/* the moment of success — shown after a download fires */
+.afterglow{
+  border:1px solid var(--line); border-left:3px solid var(--blue); background:var(--card);
+  border-radius:2px; padding:14px 16px; margin-top:14px;
+}
+.afterglow p{margin:0 0 10px; font-size:14.5px}
+.afterglow .links{display:flex; gap:6px; flex-wrap:wrap}
+.afterglow .links a{
+  font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.1em;
+  text-decoration:none; color:var(--ink); border:1px solid var(--line-strong);
+  border-radius:2px; padding:8px 10px;
+}
+.afterglow .links a:hover{border-color:var(--blue); background:var(--blue-wash); color:var(--blue-deep)}
+
+/* donation */
+.chai{
+  border:1px solid var(--line); background:var(--card); border-radius:2px; padding:18px; margin-top:24px;
+}
+.chai h3{margin:0 0 8px; font-size:16px}
+.chai p{margin:0 0 12px; font-size:14.5px; color:#2c313a}
+.chai .ways{display:flex; gap:8px; flex-wrap:wrap}
+.chai .ways a,.chai .ways span{
+  font-family:var(--mono); font-size:12px; border:1px solid var(--line-strong); border-radius:2px;
+  padding:10px 12px; text-decoration:none; color:var(--ink); min-height:var(--tap);
+  display:inline-flex; align-items:center; gap:6px;
+}
+.chai .ways a:hover{border-color:var(--blue); background:var(--blue-wash)}
+
+/* ------------------------------------------------------------------ footer */
+
+.foot{
+  border-top:2px solid var(--ink); margin-top:52px; padding-top:14px;
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); line-height:1.9;
+}
+.foot a{color:var(--ink-soft)}
+.foot a:hover{color:var(--blue-deep)}
+.foot .r{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.foot .r .dot{opacity:.4}
+
+/* keep the sticky action bar clear of iOS home indicator */
+@supports (padding:max(0px)){
+  .bar{padding-bottom:max(12px, env(safe-area-inset-bottom))}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important; animation:none !important}
+}

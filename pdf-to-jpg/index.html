@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF to JPG without uploading — Kagaz</title>
+<meta name="description" content="Convert PDF pages to JPG or PNG images at any resolution, entirely in your browser. Nothing is uploaded. You choose the dpi, not the tool. Free and open source.">
+<link rel="canonical" href="https://kagaz.namastevis.in/pdf-to-jpg/">
+<meta property="og:title" content="PDF to JPG without uploading — Kagaz">
+<meta property="og:description" content="Convert PDF pages to images at any resolution, entirely in your browser.">
+<meta property="og:url" content="https://kagaz.namastevis.in/pdf-to-jpg/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Is my PDF uploaded to convert it?","acceptedAnswer":{"@type":"Answer","text":"No. Pages are rendered to images by pdf.js inside your browser. Kagaz has no server."}},
+{"@type":"Question","name":"What resolution should I choose?","acceptedAnswer":{"@type":"Answer","text":"Use 72 or 96 dpi for something that will only be seen on a screen, 150 dpi for a good general-purpose image, and 300 dpi if the image will be printed. Higher dpi means a sharper but much larger image."}},
+{"@type":"Question","name":"Should I pick JPG or PNG?","acceptedAnswer":{"@type":"Answer","text":"JPG is much smaller and right for pages that are mostly photographs or scans. PNG is lossless and keeps text edges crisp, which suits diagrams, screenshots and pages of type."}}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../merge-pdf/">Merge</a>
+      <a href="../split-pdf/">Split</a>
+      <a href="../compress-pdf/">Compress</a>
+      <a href="../pdf-to-jpg/" aria-current="page">To JPG</a>
+      <span class="sep" aria-hidden="true"></span>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Convert · nothing uploaded</p>
+  <h1>PDF to JPG</h1>
+  <p class="lede">
+    Turn pages into images at the resolution <b>you</b> pick — 72 dpi for a screen, 300 dpi for
+    print. Most converters decide this for you and hand back something blurry. Runs entirely in this tab.
+  </p>
+
+  <section class="panel" id="panelFile">
+    <div class="head"><span class="step">1</span><h2>Your PDF</h2><span class="note" id="fileNote">no file yet</span></div>
+    <div class="body">
+      <div class="drop" id="drop">
+        <span class="big">Drop a PDF here</span>
+        <span class="small">or tap to choose · one file at a time</span>
+      </div>
+      <ul class="filelist" id="list"></ul>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelOpts" hidden>
+    <div class="head"><span class="step">2</span><h2>Image settings</h2><span class="note" id="estNote"></span></div>
+    <div class="body stack">
+      <div class="row">
+        <div>
+          <span class="fldlabel">Format</span>
+          <div class="seg" id="fmts" role="group" aria-label="Image format">
+            <button type="button" data-fmt="jpg" aria-pressed="true">JPG</button>
+            <button type="button" data-fmt="png" aria-pressed="false">PNG</button>
+          </div>
+        </div>
+        <div>
+          <span class="fldlabel">Resolution</span>
+          <div class="seg" id="dpis" role="group" aria-label="Resolution">
+            <button type="button" data-dpi="72" aria-pressed="false">72</button>
+            <button type="button" data-dpi="150" aria-pressed="true">150</button>
+            <button type="button" data-dpi="300" aria-pressed="false">300</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="qualityWrap">
+        <label class="fld" for="quality">JPG quality — <span id="qVal">85</span>%</label>
+        <input type="range" id="quality" min="40" max="100" value="85" step="5">
+      </div>
+
+      <div>
+        <label class="fld" for="ranges">Pages</label>
+        <input type="text" id="ranges" value="all" spellcheck="false" placeholder="all, or 1-3, 8, 12-">
+        <p class="hint">Leave as <code>all</code>, or list pages: <code>1-3, 8, 12-</code>. <code>odd</code> and <code>even</code> work too.</p>
+      </div>
+
+      <div id="planMsg"></div>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">Add a PDF</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Convert and download</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+  <div id="result"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p>
+      Converted on your own machine — nothing was uploaded. Kagaz is free and open source,
+      built by <b>Amit Jena</b> in India.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+      <a href="../">More Kagaz tools</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>Choosing a resolution</h2>
+    <p>
+      A PDF page has no resolution of its own — it is a set of drawing instructions. Turning it
+      into an image means deciding how finely to draw it, and that is what dpi means here.
+    </p>
+    <ul>
+      <li><b>72–96 dpi</b> — for a screen: a web page, a slide, a WhatsApp message. An A4 page comes out about 800 px wide.</li>
+      <li><b>150 dpi</b> — a good default. Sharp on a high-density phone screen, still a sensible file size.</li>
+      <li><b>300 dpi</b> — print quality. An A4 page becomes roughly 2480 × 3508 px, and the files get big.</li>
+    </ul>
+    <p>
+      Very large pages are capped so that a single image cannot exhaust your browser's memory.
+      If that cap kicks in, Kagaz says so rather than silently producing something different
+      from what you asked for.
+    </p>
+
+    <h2>JPG or PNG?</h2>
+    <p>
+      Choose <b>JPG</b> for pages that are mostly photographs or scans — it is dramatically
+      smaller and the loss is invisible. Choose <b>PNG</b> for diagrams, screenshots, charts and
+      pages of text, where JPG's compression leaves faint smudges around sharp edges.
+    </p>
+
+    <h2>Common questions</h2>
+    <h3>Are my files uploaded?</h3>
+    <p>No. Rendering is done by pdf.js in your browser. There is no server behind this page.</p>
+    <h3>Why do I get a ZIP?</h3>
+    <p>A one-page conversion downloads as a plain image. More than one page is packed into a ZIP, because a browser can only hand you one download at a time.</p>
+    <h3>Can I go the other way, images into a PDF?</h3>
+    <p>Not yet — it is written up as a <a href="../contribute/">good first issue</a> if you would like to build it.</p>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../merge-pdf/">Merge PDF</a> — join files into one</li>
+      <li><a href="../split-pdf/">Split PDF</a> — extract or break apart</li>
+      <li><a href="../compress-pdf/">Compress PDF</a> — shrink images, keep text as text</li>
+      <li><a href="../certificate/">Certificate Press</a> — one design, many names</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../contribute/">Contribute</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../vendor/pdf.min.js"></script>
+<script src="../vendor/jszip.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+  var current = null, fmt = 'jpg', dpi = 150;
+  var thumbUrls = [];
+
+  var listEl = K.$('#list'), noteEl = K.$('#fileNote'), estNote = K.$('#estNote');
+  var countEl = K.$('#count'), goBtn = K.$('#go'), clearBtn = K.$('#clear');
+  var progEl = K.$('#prog'), msgEl = K.$('#msg'), fileMsgEl = K.$('#fileMsg');
+  var planMsgEl = K.$('#planMsg'), resultEl = K.$('#result'), optsPanel = K.$('#panelOpts');
+
+  K.dropzone(K.$('#drop'), {
+    accept: '.pdf,application/pdf',
+    match: K.isPdf,
+    onFiles: function (added) { open(added[0]); }
+  });
+
+  async function open(file) {
+    K.say(fileMsgEl, 'info', 'Reading “' + file.name + '”…');
+    try {
+      var bytes = await K.read(file);
+      var info = await ops.describe(bytes, file.name);
+      current = { name: file.name, size: file.size, bytes: bytes, pages: info.pages };
+      K.say(fileMsgEl, 'warn', K.sizeWarning(file.size));
+    } catch (err) {
+      current = null;
+      K.say(fileMsgEl, 'err', K.humanError(err));
+    }
+    render();
+  }
+
+  K.$$('#fmts button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      fmt = b.getAttribute('data-fmt');
+      K.$$('#fmts button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      K.$('#qualityWrap').hidden = fmt !== 'jpg';
+      preview();
+    });
+  });
+
+  K.$$('#dpis button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      dpi = parseInt(b.getAttribute('data-dpi'), 10);
+      K.$$('#dpis button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      preview();
+    });
+  });
+
+  K.$('#quality').addEventListener('input', function () {
+    K.$('#qVal').textContent = this.value;
+  });
+  K.$('#ranges').addEventListener('input', preview);
+
+  function selection() {
+    if (!current) return [];
+    return ops.parseRanges(K.$('#ranges').value, current.pages).indices;
+  }
+
+  function preview() {
+    if (!current) { estNote.textContent = ''; return; }
+    var sel = selection();
+    estNote.textContent = sel.length + ' page' + (sel.length === 1 ? '' : 's') + ' at ' + dpi + ' dpi';
+    countEl.innerHTML = '<b>' + sel.length + '</b> image' + (sel.length === 1 ? '' : 's') + ' · ' + fmt.toUpperCase() + ' · ' + dpi + ' dpi';
+    goBtn.disabled = sel.length === 0;
+
+    var heavy = sel.length * dpi * dpi;
+    if (!sel.length) K.say(planMsgEl, 'warn', 'That page selection is empty.');
+    else if (dpi === 300 && sel.length > 40) {
+      K.say(planMsgEl, 'warn', sel.length + ' pages at 300 dpi is a lot of pixels to hold in one tab. If it stalls, convert in smaller batches or drop to 150 dpi.');
+    } else if (fmt === 'png' && dpi === 300 && sel.length > 15) {
+      K.say(planMsgEl, 'warn', 'PNG at 300 dpi produces very large files — expect several megabytes per page.');
+    } else K.say(planMsgEl, '', null);
+  }
+
+  function render() {
+    listEl.innerHTML = '';
+    if (current) {
+      var li = K.el('li', { class: 'fileitem' });
+      li.appendChild(K.el('span', { class: 'idx', text: '1' }));
+      var meta = K.el('div', { class: 'meta' });
+      meta.appendChild(K.el('div', { class: 'nm', text: current.name, title: current.name }));
+      meta.appendChild(K.el('div', { class: 'sz', text: K.bytes(current.size) + ' · ' + current.pages + ' pages' }));
+      li.appendChild(meta);
+      var ctl = K.el('div', { class: 'ctl' });
+      ctl.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Remove', 'aria-label': 'Remove file',
+        onclick: function () { current = null; render(); }, text: '×'
+      }));
+      li.appendChild(ctl);
+      listEl.appendChild(li);
+      noteEl.textContent = current.pages + ' pages · ' + K.bytes(current.size);
+    } else {
+      noteEl.textContent = 'no file yet';
+      countEl.textContent = 'Add a PDF';
+      estNote.textContent = '';
+    }
+    optsPanel.hidden = !current;
+    clearBtn.disabled = !current;
+    goBtn.disabled = !current;
+    K.$('#panelFile').classList.toggle('done', !!current);
+    if (current) preview();
+  }
+
+  clearBtn.addEventListener('click', function () {
+    current = null;
+    clearThumbs();
+    resultEl.innerHTML = '';
+    K.say(msgEl, '', null);
+    K.say(fileMsgEl, '', null);
+    render();
+  });
+
+  function clearThumbs() {
+    thumbUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+    thumbUrls = [];
+  }
+
+  goBtn.addEventListener('click', async function () {
+    if (!current) return;
+    goBtn.disabled = true; clearBtn.disabled = true;
+    clearThumbs();
+    resultEl.innerHTML = '';
+    var bar = K.progress(progEl);
+    var quality = parseInt(K.$('#quality').value, 10) / 100;
+    var mime = fmt === 'png' ? 'image/png' : 'image/jpeg';
+    var ext = fmt === 'png' ? '.png' : '.jpg';
+
+    try {
+      K.say(msgEl, 'info', 'Opening the document…');
+      var pdfjsLib = K.pdfjs();
+      // pdf.js may detach the buffer it is given, so hand it a copy.
+      var doc = await pdfjsLib.getDocument({ data: current.bytes.slice(0) }).promise;
+
+      var sel = selection();
+      var base = current.name.replace(/\.pdf$/i, '').replace(/[\\/:*?"<>|]+/g, '_');
+      var width = String(current.pages).length;
+      var files = [], thumbs = [], totalBytes = 0;
+
+      for (var i = 0; i < sel.length; i++) {
+        K.say(msgEl, 'info', 'Rendering page ' + (sel[i] + 1) + ' — ' + (i + 1) + ' of ' + sel.length + '…');
+        bar.set(i / sel.length * 0.92);
+        await K.tick();
+
+        var page = await doc.getPage(sel[i] + 1);
+        var canvas = await K.renderPage(page, dpi);
+        var out = await K.canvasToBytes(canvas, mime, quality);
+        if (!out) throw new Error('The browser could not encode page ' + (sel[i] + 1) + '.');
+
+        var pageNo = String(sel[i] + 1);
+        while (pageNo.length < width) pageNo = '0' + pageNo;
+        files.push({ name: base + '_' + pageNo + ext, bytes: out.bytes });
+        totalBytes += out.bytes.length;
+
+        if (thumbs.length < 24) {
+          thumbs.push({ url: URL.createObjectURL(out.blob), label: 'p' + (sel[i] + 1) + ' · ' + canvas.width + '×' + canvas.height });
+        }
+        canvas.width = canvas.height = 0;   // release the bitmap early
+        page.cleanup();
+      }
+
+      doc.destroy();
+      bar.set(0.95);
+
+      if (files.length === 1) {
+        K.download(files[0].bytes, files[0].name, mime);
+        K.say(msgEl, 'good', 'One image — ' + K.bytes(totalBytes) + '.');
+      } else {
+        K.say(msgEl, 'info', 'Packing ' + files.length + ' images into a ZIP…');
+        await K.zip(files, base + '_' + fmt + '.zip', function (f) { bar.set(0.95 + f * 0.05); });
+        K.say(msgEl, 'good', files.length + ' images — ' + K.bytes(totalBytes) + ' in total.');
+      }
+
+      showResult(files.length, totalBytes, thumbs);
+
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      goBtn.disabled = false; clearBtn.disabled = false;
+    }
+  });
+
+  function showResult(count, totalBytes, thumbs) {
+    var box = K.el('div', { class: 'result' });
+    var figs = K.el('div', { class: 'figures' });
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b>' + count + '</b>images' }));
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b>' + K.bytes(totalBytes) + '</b>total' }));
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b>' + dpi + '</b>dpi' }));
+    box.appendChild(figs);
+
+    if (thumbs.length) {
+      var grid = K.el('div', { class: 'thumbs' });
+      thumbs.forEach(function (t) {
+        thumbUrls.push(t.url);
+        var cell = K.el('div', { class: 'thumb' });
+        cell.appendChild(K.el('img', { src: t.url, alt: t.label, loading: 'lazy' }));
+        cell.appendChild(K.el('span', { text: t.label }));
+        grid.appendChild(cell);
+      });
+      box.appendChild(grid);
+      if (count > thumbs.length) {
+        box.appendChild(K.el('p', { class: 'hint', text: 'Showing the first ' + thumbs.length + ' of ' + count + ' pages. All of them are in the ZIP.' }));
+      }
+    }
+    resultEl.appendChild(box);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

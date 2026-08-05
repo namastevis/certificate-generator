@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /test/
+Disallow: /attic/
+Disallow: /index_v1.html
+
+Sitemap: https://kagaz.namastevis.in/sitemap.xml
