@@ -57,6 +57,16 @@ it. It also means running a job costs nothing, so there is no reason to meter it
   JBIG2, CCITT fax, indexed colour — it is left alone and reported, rather than corrupted
   to make a compression percentage look better.
 
+## There is no usage counter
+
+No "2 million documents processed" badge, no analytics, not even the self-hosted privacy-respecting
+kind. A number like that has to be counted somewhere, which means a request from your browser on
+every visit — tiny, anonymous, and still the site watching you.
+
+So I do not know how many people use Kagaz. [`tests/verify.mjs`](tests/verify.mjs) fails the build
+if any page ever loads something from another origin, or if the shared scripts gain a network call,
+which is what makes that checkable rather than a promise.
+
 ## Compression, specifically
 
 The default mode walks every image XObject in the document, downsamples anything larger

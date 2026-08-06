@@ -186,6 +186,25 @@
       says so, rather than corrupting it to make a number look better.
     </p>
 
+    <h2>There is no counter on this page</h2>
+    <p>
+      You will not find a “2 million documents processed” badge anywhere on this site, and there
+      never will be one. A number like that has to be counted somewhere, which means a request
+      fired from your browser every time you open a page or press a button. It would be tiny,
+      and anonymous, and it would still be this site watching you.
+    </p>
+    <p>
+      So <b>I have no idea how many people use Kagaz</b>, because finding out would mean watching
+      you. That is the trade, and I would rather have it this way round.
+    </p>
+    <p>
+      This is not a promise you have to take on faith. The repository's test suite
+      <a href="https://github.com/namastevis/kagaz/blob/main/tests/verify.mjs">fails the build</a>
+      if any page ever loads something from another origin, or if the shared scripts ever gain a
+      network call. If you want a number that tells you whether this is worth trusting, the
+      <a href="https://github.com/namastevis/kagaz">repository is public</a> and so is its star count.
+    </p>
+
     <h2>How it is built</h2>
     <p>
       Plain HTML, CSS and JavaScript. No framework, no build step, no bundler. Each tool is
