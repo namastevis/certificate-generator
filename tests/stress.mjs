@@ -777,6 +777,111 @@ await succeeds('images to PDF can start a chain', async () => {
   return 'photo → PDF → rotate → number';
 });
 
+/* --------------------------------------------------- chain() equivalence */
+
+group('chain() — one parse instead of N');
+
+await succeeds('chain matches running the operations in turn', async () => {
+  const steps = [
+    { type: 'rotate',   opts: { angle: 90 } },
+    { type: 'crop',     opts: { margins: { left: 0.05, right: 0.05 } } },
+    { type: 'numbers',  opts: { format: '{n}' } },
+    { type: 'stamp',    opts: { text: 'DRAFT', tile: true, opacity: 0.2 } },
+    { type: 'compress', opts: { mode: 'structural' } }
+  ];
+
+  let sequential = good10;
+  sequential = (await ops.rotate(sequential, steps[0].opts)).bytes;
+  sequential = (await ops.crop(sequential, steps[1].opts)).bytes;
+  sequential = (await ops.pageNumbers(sequential, steps[2].opts)).bytes;
+  sequential = (await ops.stampPages(sequential, steps[3].opts)).bytes;
+  sequential = (await ops.compress(sequential, steps[4].opts)).bytes;
+
+  const chained = await ops.chain(good10, steps);
+
+  const a = await inspect(sequential), b = await inspect(chained.bytes);
+  if (a.pages !== b.pages) throw new Error('page counts differ: ' + a.pages + ' vs ' + b.pages);
+  if (a.hasText !== b.hasText) throw new Error('text survival differs');
+
+  const docA = await ops.load(sequential), docB = await ops.load(chained.bytes);
+  if (docA.getPage(0).getRotation().angle !== docB.getPage(0).getRotation().angle) {
+    throw new Error('rotation differs');
+  }
+  const boxA = docA.getPage(0).getCropBox(), boxB = docB.getPage(0).getCropBox();
+  if (Math.abs(boxA.width - boxB.width) > 0.5) throw new Error('crop differs');
+
+  // Fewer serialisations means less accumulated cruft, so chained should not
+  // be larger. Equal is fine; bigger means something regressed.
+  if (chained.after > sequential.length) {
+    throw new Error('chained output is larger: ' + chained.after + ' vs ' + sequential.length);
+  }
+  return a.pages + ' pages both ways · ' + Math.round(sequential.length / 1024) + ' KB sequential vs ' +
+    Math.round(chained.after / 1024) + ' KB chained';
+});
+
+await succeeds('chain reports which step failed and applies nothing', async () => {
+  try {
+    await ops.chain(good3, [
+      { type: 'rotate', opts: { angle: 90 } },
+      { type: 'numbers', opts: { ranges: '80-90' } }
+    ]);
+  } catch (err) {
+    if (!err.friendly) throw new Error('not a KagazError');
+    if (!/Step 2/.test(err.message)) throw new Error('does not name the failing step: ' + err.message);
+    return err.message.slice(0, 62) + '…';
+  }
+  throw new Error('the bad step did not fail the chain');
+});
+
+await refuses('chain with no steps', () => ops.chain(good3, []), 'nosteps');
+await refuses('chain with an unknown step type', () => ops.chain(good3, [{ type: 'teleport' }]), 'badstep');
+
+await succeeds('organize works as a chain step without a precomputed order', async () => {
+  const keep = await ops.chain(good10, [{ type: 'organize', opts: { mode: 'keep', ranges: '1-4' } }]);
+  const drop = await ops.chain(good10, [{ type: 'organize', opts: { mode: 'remove', ranges: '1-4' } }]);
+  if (keep.pages !== 4) throw new Error('keep gave ' + keep.pages + ' pages');
+  if (drop.pages !== 6) throw new Error('remove gave ' + drop.pages + ' pages');
+  return 'keep 1-4 → 4 pages · remove 1-4 → 6 pages';
+});
+
+await succeeds('a step that changes the page count feeds the next step correctly', async () => {
+  // Numbering after a removal must number what is left, not what there was.
+  const out = await ops.chain(good10, [
+    { type: 'organize', opts: { mode: 'keep', ranges: '1-3' } },
+    { type: 'numbers', opts: { format: '{n} of {total}' } },
+    { type: 'stamp', opts: { text: 'X', ranges: 'last' } }
+  ]);
+  if (out.pages !== 3) throw new Error('expected 3 pages, got ' + out.pages);
+  if (out.log[1].pages !== 3) throw new Error('the log did not track the page count');
+  return '10 → 3 pages, then numbered and stamped';
+});
+
+await succeeds('chain is measurably fewer parses than the bytes API', async () => {
+  const steps = [
+    { type: 'rotate', opts: { angle: 90 } },
+    { type: 'crop', opts: { margins: { left: 0.05 } } },
+    { type: 'numbers', opts: {} },
+    { type: 'stamp', opts: { text: 'DRAFT', tile: true } }
+  ];
+  const big = await makePdf(200);
+
+  let t = Date.now();
+  let b = big;
+  b = (await ops.rotate(b, steps[0].opts)).bytes;
+  b = (await ops.crop(b, steps[1].opts)).bytes;
+  b = (await ops.pageNumbers(b, steps[2].opts)).bytes;
+  b = (await ops.stampPages(b, steps[3].opts)).bytes;
+  const seq = Date.now() - t;
+
+  t = Date.now();
+  await ops.chain(big, steps);
+  const ch = Date.now() - t;
+
+  // Generous threshold — CI machines are noisy. The point is the shape.
+  if (ch > seq) throw new Error('chain was slower: ' + ch + ' ms vs ' + seq + ' ms');
+  return '200 pages · sequential ' + seq + ' ms vs chained ' + ch + ' ms';
+});
+
 /* --------------------------------------------------------------------- report */
 
 console.log('\n' + '─'.repeat(64));

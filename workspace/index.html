@@ -283,11 +283,11 @@
         { key: 'angle', label: 'Turn', type: 'seg', options: [[90, '90° right'], [270, '90° left'], [180, '180°']] },
         { key: 'ranges', label: 'Pages', type: 'text', placeholder: 'all, or 1-3' }
       ],
-      apply: async function (bytes, o) {
-        return (await ops.rotate(bytes, {
+      step: function (o) {
+        return { type: 'rotate', opts: {
           angle: num(o.angle, 90),
           ranges: /^all$/i.test(String(o.ranges).trim()) ? null : o.ranges
-        })).bytes;
+        } };
       }
     },
 
@@ -299,20 +299,8 @@
         { key: 'mode', label: 'Action', type: 'seg', options: [['keep', 'keep only these'], ['remove', 'remove these']] },
         { key: 'ranges', label: 'Pages', type: 'text', placeholder: '1-3, 8, 12-' }
       ],
-      apply: async function (bytes, o) {
-        var info = await ops.describe(bytes);
-        var picked = ops.parseRanges(o.ranges, info.pages).indices;
-        var order;
-        if (o.mode === 'keep') {
-          order = picked;
-        } else {
-          var drop = {};
-          picked.forEach(function (i) { drop[i] = true; });
-          order = [];
-          for (var i = 0; i < info.pages; i++) if (!drop[i]) order.push(i);
-        }
-        if (!order.length) throw new Error('that would leave no pages');
-        return (await ops.organize(bytes, { order: order })).bytes;
+      step: function (o) {
+        return { type: 'organize', opts: { mode: o.mode, ranges: o.ranges } };
       }
     },
 
@@ -326,13 +314,11 @@
         { key: 'left', label: 'Left %', type: 'range', min: 0, max: 45 },
         { key: 'right', label: 'Right %', type: 'range', min: 0, max: 45 }
       ],
-      apply: async function (bytes, o) {
-        return (await ops.crop(bytes, {
-          margins: {
-            top: num(o.top, 0) / 100, bottom: num(o.bottom, 0) / 100,
-            left: num(o.left, 0) / 100, right: num(o.right, 0) / 100
-          }
-        })).bytes;
+      step: function (o) {
+        return { type: 'crop', opts: { margins: {
+          top: num(o.top, 0) / 100, bottom: num(o.bottom, 0) / 100,
+          left: num(o.left, 0) / 100, right: num(o.right, 0) / 100
+        } } };
       }
     },
 
@@ -347,12 +333,12 @@
         { key: 'size', label: 'Size (pt)', type: 'range', min: 6, max: 28 },
         { key: 'ranges', label: 'Pages', type: 'text', placeholder: 'all, or 2- to skip a cover' }
       ],
-      apply: async function (bytes, o) {
-        return (await ops.pageNumbers(bytes, {
+      step: function (o) {
+        return { type: 'numbers', opts: {
           position: o.position, format: o.format,
           start: num(o.start, 1), size: num(o.size, 11),
           ranges: /^all$/i.test(String(o.ranges).trim()) ? null : o.ranges
-        })).bytes;
+        } };
       }
     },
 
@@ -368,13 +354,13 @@
         { key: 'size', label: 'Size (pt)', type: 'range', min: 10, max: 140 },
         { key: 'color', label: 'Colour', type: 'color' }
       ],
-      apply: async function (bytes, o) {
+      step: function (o) {
         if (!String(o.text).trim()) throw new Error('no watermark text');
-        return (await ops.stampPages(bytes, {
+        return { type: 'stamp', opts: {
           text: String(o.text).trim(), tile: o.tile === 'yes',
           opacity: num(o.opacity, 25) / 100, angle: num(o.angle, 45),
           size: num(o.size, 48), color: o.color, position: 'centre'
-        })).bytes;
+        } };
       }
     },
 
@@ -383,12 +369,12 @@
       defaults: { position: 'bottom-right', scale: 30, ranges: 'last', png: null },
       summary: function (o) { return (o.png ? 'drawn' : 'not drawn yet') + ' · ' + o.ranges; },
       custom: true,
-      apply: async function (bytes, o) {
+      step: function (o) {
         if (!o.png) throw new Error('no signature was drawn');
-        return (await ops.stampPages(bytes, {
+        return { type: 'stamp', opts: {
           image: o.png, imageType: 'png', opacity: 1,
           scale: num(o.scale, 30) / 100, position: o.position, ranges: o.ranges
-        })).bytes;
+        } };
       }
     },
 
@@ -400,10 +386,10 @@
         { key: 'dpi', label: 'Image detail', type: 'seg', options: [[96, 'screen · 96'], [150, 'ebook · 150'], [220, 'print · 220']] },
         { key: 'quality', label: 'JPEG quality %', type: 'range', min: 40, max: 95 }
       ],
-      apply: async function (bytes, o) {
-        return (await ops.compress(bytes, {
+      step: function (o) {
+        return { type: 'compress', opts: {
           mode: 'images', dpi: num(o.dpi, 150), quality: num(o.quality, 72) / 100
-        }, K.codec)).bytes;
+        } };
       }
     }
   };
@@ -633,26 +619,31 @@
     var log = [];
 
     try {
-      var bytes = source.bytes;
-      var before = bytes.length;
-
-      for (var i = 0; i < steps.length; i++) {
-        var step = steps[i], def = TYPES[step.type];
-        K.say(msgEl, 'info', 'Step ' + (i + 1) + ' of ' + steps.length + ' — ' + def.label + '…');
-        bar.set(i / steps.length * 0.92);
-        await K.tick();
-
-        var sizeBefore = bytes.length;
+      // One parse, one write. Each step is applied to the live document, which
+      // is 2-3x quicker than handing bytes between operations and leaves less
+      // accumulated cruft in the result.
+      var plan = steps.map(function (step, i) {
         try {
-          // Each step consumes the previous result. Nothing touches disk.
-          bytes = await def.apply(bytes, step.opts);
+          return TYPES[step.type].step(step.opts);
         } catch (err) {
-          throw new Error('Step ' + (i + 1) + ', ' + def.label + ' — ' +
-            (err && err.friendly ? err.message : (err && err.message) || 'failed') +
-            '. Nothing was applied; your document is unchanged.');
+          throw new Error('Step ' + (i + 1) + ', ' + TYPES[step.type].label + ' — ' + err.message + '.');
         }
-        log.push({ n: i + 1, label: def.label, note: def.summary(step.opts), delta: bytes.length - sizeBefore });
-      }
+      });
+
+      var before = source.bytes.length;
+      var out = await ops.chain(source.bytes, plan, {
+        name: source.name,
+        onProgress: function (frac, type) {
+          bar.set(frac * 0.92);
+          var at = Math.min(steps.length - 1, Math.round(frac * steps.length));
+          K.say(msgEl, 'info', 'Step ' + (at + 1) + ' of ' + steps.length + ' — ' + TYPES[steps[at].type].label + '…');
+        }
+      }, K.codec);
+
+      var log = out.log.map(function (row, i) {
+        return { n: row.step, label: TYPES[steps[i].type].label, note: TYPES[steps[i].type].summary(steps[i].opts), pages: row.pages };
+      });
+      var bytes = out.bytes;
 
       bar.set(1);
       var info = await ops.describe(bytes, source.name);
@@ -683,14 +674,14 @@
     var table = K.el('table', { class: 'report' });
     table.appendChild(K.el('tr', {}, [
       K.el('th', { text: '#' }), K.el('th', { text: 'Step' }),
-      K.el('th', { text: 'Settings' }), K.el('th', { text: 'Size change' })
+      K.el('th', { text: 'Settings' }), K.el('th', { text: 'Pages after' })
     ]));
     log.forEach(function (row) {
       table.appendChild(K.el('tr', {}, [
         K.el('td', { text: String(row.n) }),
         K.el('td', { text: row.label }),
         K.el('td', { text: row.note }),
-        K.el('td', { text: (row.delta > 0 ? '+' : '') + K.bytes(Math.abs(row.delta)) })
+        K.el('td', { text: String(row.pages) })
       ]));
     });
     box.appendChild(table);

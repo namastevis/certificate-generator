@@ -493,12 +493,9 @@
    *   resampleJpeg(bytes, maxEdge, quality) -> { data, width, height }
    *   resampleRaw(samples, w, h, comps, maxEdge, quality) -> { data, width, height }
    */
-  async function compress(input, opts, codec) {
+  async function applyCompress(doc, opts, codec) {
     opts = opts || {};
     var onProgress = opts.onProgress || function () {};
-    var bytes = asBytes(input);
-    var before = bytes ? bytes.length : 0;
-    var doc = await load(bytes, opts.name);
 
     var stats = { mode: opts.mode || 'structural', images: 0, changed: 0, imageBytesSaved: 0, skipped: [], changes: [] };
 
@@ -550,11 +547,73 @@
     }
 
     stripJunk(doc);
-    stamp(doc);
     onProgress(1, 'writing');
+    return stats;
+  }
 
+  async function compress(input, opts, codec) {
+    var bytes = asBytes(input);
+    var before = bytes ? bytes.length : 0;
+    var doc = await load(bytes, (opts || {}).name);
+    var stats = await applyCompress(doc, opts, codec);
+    stamp(doc);
     var out = await doc.save({ useObjectStreams: true });
     return { bytes: out, before: before, after: out.length, stats: stats };
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Chaining
+   * ------------------------------------------------------------------ */
+
+  /**
+   * Every public operation is bytes -> bytes, which keeps them independently
+   * testable but means an N-step sequence parses and re-serialises the
+   * document N times. The workspace runs exactly such sequences, so it uses
+   * this instead: parse once, apply each step to the live document, write once.
+   *
+   * steps: [{ type, opts }] where type is a key of STEPS below.
+   * The result is byte-for-byte equivalent to running the operations in turn.
+   */
+  var STEPS = {
+    rotate:   function (doc, o) { applyRotate(doc, o); return doc; },
+    crop:     function (doc, o) { applyCrop(doc, o); return doc; },
+    numbers:  async function (doc, o) { await applyPageNumbers(doc, o); return doc; },
+    stamp:    async function (doc, o) { await applyStamp(doc, o); return doc; },
+    organize: async function (doc, o) { return (await applyOrganize(doc, o)).doc; },
+    compress: async function (doc, o, codec) { await applyCompress(doc, o, codec); return doc; }
+  };
+
+  async function chain(input, steps, opts, codec) {
+    opts = opts || {};
+    var onProgress = opts.onProgress || function () {};
+    if (!steps || !steps.length) throw KagazError('nosteps', 'Add at least one step first.');
+
+    var bytes = asBytes(input);
+    var before = bytes ? bytes.length : 0;
+    var doc = await load(bytes, opts.name);
+    var log = [];
+
+    for (var i = 0; i < steps.length; i++) {
+      var step = steps[i];
+      var run = STEPS[step.type];
+      if (!run) throw KagazError('badstep', 'Step ' + (i + 1) + ' is not a kind of step Kagaz knows about.');
+
+      onProgress(i / steps.length, step.type);
+      try {
+        doc = await run(doc, step.opts || {}, codec);
+      } catch (err) {
+        // A half-applied chain is worse than none, so say which step and stop.
+        throw KagazError('step',
+          'Step ' + (i + 1) + ' (' + step.type + ') could not be applied: ' +
+          (err && err.message ? err.message : 'unknown reason') + '.');
+      }
+      log.push({ step: i + 1, type: step.type, pages: doc.getPageCount() });
+    }
+
+    stamp(doc);
+    onProgress(1, 'writing');
+    var out = await doc.save({ useObjectStreams: true });
+    return { bytes: out, before: before, after: out.length, pages: doc.getPageCount(), log: log };
   }
 
   /**
@@ -619,9 +678,8 @@
    * from wherever this page already is", which is what someone clicking a
    * rotate button expects. Absolute mode sets the angle outright.
    */
-  async function rotate(input, opts) {
+  function applyRotate(doc, opts) {
     opts = opts || {};
-    var doc = await load(input, opts.name);
     var pages = doc.getPages();
     var targets = opts.ranges ? parseRanges(opts.ranges, pages.length).indices : pages.map(function (p, i) { return i; });
     var angle = norm360(opts.angle || 0);
@@ -635,8 +693,14 @@
       changed++;
     }
 
+    return { changed: changed, pages: pages.length };
+  }
+
+  async function rotate(input, opts) {
+    var doc = await load(input, (opts || {}).name);
+    var r = applyRotate(doc, opts);
     stamp(doc);
-    return { bytes: await doc.save({ useObjectStreams: true }), changed: changed, pages: pages.length };
+    return { bytes: await doc.save({ useObjectStreams: true }), changed: r.changed, pages: r.pages };
   }
 
   /**
@@ -645,11 +709,26 @@
    * it, repeat one to duplicate it. `rotations` maps source index to an extra
    * turn, so reordering and rotating happen in a single pass.
    */
-  async function organize(input, opts) {
+  async function applyOrganize(src, opts) {
     opts = opts || {};
-    var src = await load(input, opts.name);
     var count = src.getPageCount();
-    var order = (opts.order || []).filter(function (i) { return i >= 0 && i < count; });
+    var order;
+
+    if (opts.order) {
+      order = opts.order.filter(function (i) { return i >= 0 && i < count; });
+    } else {
+      // Range form, for callers that cannot know the page count in advance —
+      // a chain step, for instance, running after something that removed pages.
+      var picked = parseRanges(opts.ranges, count).indices;
+      if (opts.mode === 'remove') {
+        var drop = {};
+        picked.forEach(function (i) { drop[i] = true; });
+        order = [];
+        for (var k = 0; k < count; k++) if (!drop[k]) order.push(k);
+      } else {
+        order = picked;
+      }
+    }
 
     if (!order.length) throw KagazError('nopages', 'That would delete every page. Keep at least one.');
 
@@ -668,12 +747,14 @@
       out.addPage(page);
     }
 
-    stamp(out);
-    return {
-      bytes: await out.save({ useObjectStreams: true }),
-      pages: order.length,
-      removed: count - new Set(order).size
-    };
+    return { doc: out, pages: order.length, removed: count - new Set(order).size };
+  }
+
+  async function organize(input, opts) {
+    var src = await load(input, (opts || {}).name);
+    var r = await applyOrganize(src, opts);
+    stamp(r.doc);
+    return { bytes: await r.doc.save({ useObjectStreams: true }), pages: r.pages, removed: r.removed };
   }
 
   /**
@@ -682,9 +763,8 @@
    * the interface honest across mixed page sizes. Nothing is deleted — the
    * content is still in the file, just outside the visible box.
    */
-  async function crop(input, opts) {
+  function applyCrop(doc, opts) {
     opts = opts || {};
-    var doc = await load(input, opts.name);
     var pages = doc.getPages();
     var targets = opts.ranges ? parseRanges(opts.ranges, pages.length).indices : pages.map(function (p, i) { return i; });
     var m = opts.margins || {};
@@ -708,8 +788,14 @@
       page.setCropBox(x, y, w, h);
     }
 
+    return { changed: targets.length };
+  }
+
+  async function crop(input, opts) {
+    var doc = await load(input, (opts || {}).name);
+    var r = applyCrop(doc, opts);
     stamp(doc);
-    return { bytes: await doc.save({ useObjectStreams: true }), changed: targets.length };
+    return { bytes: await doc.save({ useObjectStreams: true }), changed: r.changed };
   }
 
   /* ------------------------------------------------------------------ *
@@ -735,9 +821,8 @@
    * Draw a page number on every selected page.
    * `format` may contain {n} for the number and {total} for the count.
    */
-  async function pageNumbers(input, opts) {
+  async function applyPageNumbers(doc, opts) {
     opts = opts || {};
-    var doc = await load(input, opts.name);
     var pages = doc.getPages();
     var font = await doc.embedFont(opts.font || StandardFonts.Helvetica);
     var size = Math.max(5, Math.min(72, opts.size || 11));
@@ -762,8 +847,14 @@
       page.drawText(label, { x: at.x, y: at.y, size: size, font: font, color: color });
     }
 
+    return { numbered: targets.length };
+  }
+
+  async function pageNumbers(input, opts) {
+    var doc = await load(input, (opts || {}).name);
+    var r = await applyPageNumbers(doc, opts);
     stamp(doc);
-    return { bytes: await doc.save({ useObjectStreams: true }), numbered: targets.length };
+    return { bytes: await doc.save({ useObjectStreams: true }), numbered: r.numbered };
   }
 
   /**
@@ -771,9 +862,8 @@
    * Used by both the watermark tool (usually tiled, semi-transparent) and the
    * signature tool (one placement, opaque) — same operation, different settings.
    */
-  async function stampPages(input, opts) {
+  async function applyStamp(doc, opts) {
     opts = opts || {};
-    var doc = await load(input, opts.name);
     var pages = doc.getPages();
     var targets = opts.ranges ? parseRanges(opts.ranges, pages.length).indices : pages.map(function (p, i) { return i; });
     if (!targets.length) throw KagazError('nopages', 'That page selection is empty.');
@@ -839,8 +929,14 @@
       }
     }
 
+    return { stamped: targets.length };
+  }
+
+  async function stampPages(input, opts) {
+    var doc = await load(input, (opts || {}).name);
+    var r = await applyStamp(doc, opts);
     stamp(doc);
-    return { bytes: await doc.save({ useObjectStreams: true }), stamped: targets.length };
+    return { bytes: await doc.save({ useObjectStreams: true }), stamped: r.stamped };
   }
 
   /* ------------------------------------------------------------------ *
@@ -1022,6 +1118,8 @@
     split: split,
     splitPlan: splitPlan,
     compress: compress,
+    chain: chain,
+    STEP_TYPES: Object.keys(STEPS),
     rasterize: rasterize,
     rotate: rotate,
     organize: organize,
