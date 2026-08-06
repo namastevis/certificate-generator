@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF workspace — several jobs in one pass — Kagaz</title>
+<meta name="description" content="Load a document once and stack operations: rotate, crop, sign, number, watermark, compress. Everything runs in memory in your browser. Nothing is uploaded or saved.">
+<link rel="canonical" href="https://kagaz.namastevis.in/workspace/">
+<meta property="og:title" content="PDF workspace — several jobs, one pass — Kagaz">
+<meta property="og:description" content="Load once, stack operations, download at the end. Entirely in your browser.">
+<meta property="og:url" content="https://kagaz.namastevis.in/workspace/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<style>
+  .steplist{display:flex; flex-direction:column; gap:10px; margin-top:4px}
+  .step-card{border:1px solid var(--line); border-left:3px solid var(--blue); background:#fff; border-radius:2px}
+  .step-card > .sh{display:flex; align-items:center; gap:9px; padding:10px 12px; border-bottom:1px solid var(--line); flex-wrap:wrap}
+  .step-card > .sh .n{font-family:var(--mono); font-size:11px; font-weight:700; color:#fff; background:var(--blue);
+    width:20px; height:20px; display:grid; place-items:center; border-radius:2px; flex:0 0 auto}
+  .step-card > .sh h3{margin:0; font-size:14px; font-weight:700; flex:1}
+  .step-card > .sh .ctl{display:flex; gap:2px}
+  .step-card > .sb{padding:12px}
+  .step-card.err{border-left-color:var(--reg)}
+  .adder{display:flex; gap:6px; flex-wrap:wrap; margin-top:14px}
+  .adder button{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; border:1px dashed var(--line-strong);
+    background:#fbfbf9; border-radius:2px; padding:10px 12px; cursor:pointer; color:var(--ink);
+    min-height:var(--tap);
+  }
+  .adder button:hover{border-color:var(--blue); color:var(--blue-deep); background:var(--blue-wash); border-style:solid}
+  .wpad{border:1.5px dashed var(--line-strong); border-radius:3px; background:#fff; touch-action:none;
+    cursor:crosshair; display:block; width:100%; max-width:420px}
+  .pipe{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft); line-height:1.9}
+  .pipe b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../">All tools</a>
+      <a href="../roadmap/">Roadmap</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Workspace · nothing uploaded, nothing saved</p>
+  <h1>Do several things at once</h1>
+  <p class="lede">
+    Load a document once, stack up the jobs — rotate, sign, number, compress — and download the
+    result at the end. <b>The file is held in this tab's memory and never written to disk</b>,
+    so nothing is left behind when you close it.
+  </p>
+
+  <section class="panel" id="panelFile">
+    <div class="head"><span class="step">1</span><h2>Your document</h2><span class="note" id="fileNote">nothing loaded</span></div>
+    <div class="body">
+      <div class="drop" id="drop">
+        <span class="big">Drop a PDF — or a set of images</span>
+        <span class="small">images are turned into a PDF first, so a photo can start the chain</span>
+      </div>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelSteps" hidden>
+    <div class="head"><span class="step">2</span><h2>Steps</h2><span class="note" id="stepNote">no steps yet</span></div>
+    <div class="body">
+      <div class="steplist" id="steps"></div>
+      <div class="adder" id="adder">
+        <button type="button" data-add="rotate">+ Rotate</button>
+        <button type="button" data-add="pages">+ Keep or remove pages</button>
+        <button type="button" data-add="crop">+ Crop</button>
+        <button type="button" data-add="numbers">+ Page numbers</button>
+        <button type="button" data-add="watermark">+ Watermark</button>
+        <button type="button" data-add="sign">+ Signature</button>
+        <button type="button" data-add="compress">+ Compress</button>
+      </div>
+      <p class="hint">
+        Steps run top to bottom. Compress is usually last — there is no point shrinking a file
+        and then stamping a signature onto it.
+      </p>
+      <div id="stepMsg"></div>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">Load a document</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Run and download</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+  <div id="result"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p><b>Done — and nothing was uploaded or saved.</b> Everything happened in this tab's memory.</p>
+    <div class="links nexts">
+      <a href="../redact-pdf/">Redact something</a>
+      <a href="../organize-pdf/">Reorder pages visually</a>
+      <a href="../">All 14 tools</a>
+    </div>
+    <p class="made">
+      Kagaz is free and open source, made by <b>Amit Jena</b> in India. It has no server, no
+      accounts and no analytics — so I have no idea you were here, which is the idea.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>Why this exists</h2>
+    <p>
+      Each Kagaz tool does one job and hands you a file. That is fine when you need one thing, and
+      tedious when you need four — photograph a form, sign it, number the pages, shrink it for an
+      upload limit. On a laptop that means four trips through the downloads folder. On a phone it
+      is worse.
+    </p>
+    <p>
+      Here the document is loaded once and every step runs against the result of the last one, in
+      memory, in this tab. You download at the end.
+    </p>
+
+    <h2>Nothing is stored, not even locally</h2>
+    <p>
+      There is an easier way to build this: save the file to browser storage between tools and pick
+      it up on the next page. It works, and it means your document gets written to your disk by a
+      website — which for a passport scan or a medical letter is a real change, however local.
+    </p>
+    <p>
+      So the workspace keeps everything in memory instead. Close the tab and it is gone, with
+      nothing to clear out afterwards.
+    </p>
+
+    <h2>Order matters</h2>
+    <ul>
+      <li><b>Compress last.</b> Shrinking and then stamping means the stamp is at full quality on a squashed page.</li>
+      <li><b>Rotate and crop early</b>, so everything after them lands where you expect.</li>
+      <li><b>Keep or remove pages early</b> too — no sense numbering pages you are about to delete.</li>
+      <li><b>Signatures near the end</b>, once the page order is final.</li>
+    </ul>
+
+    <h2>What is not here</h2>
+    <p>
+      <a href="../redact-pdf/">Redaction</a> and <a href="../organize-pdf/">visual page organising</a>
+      stay on their own pages, because both need you to point at specific parts of specific pages.
+      Squeezing that into a step card would make both worse. Run the workspace first, then take the
+      result to those tools — or the other way round.
+    </p>
+
+    <h2>Common questions</h2>
+    <h3>Is my file uploaded?</h3>
+    <p>No. There is no server. Open the Network tab and run a chain — nothing goes out.</p>
+    <h3>Can I start from a photo?</h3>
+    <p>Yes. Drop images instead of a PDF and they are assembled into one first. To use your camera, start at <a href="../scan-to-pdf/">Scan to PDF</a> and bring the result here.</p>
+    <h3>What if one step fails?</h3>
+    <p>The run stops at that step and tells you which one, with the document unchanged. Nothing is half-applied.</p>
+    <h3>Are big documents a problem?</h3>
+    <p>Every intermediate result is held in memory, so a chain uses more than a single tool would. A laptop copes with a few hundred megabytes; a phone will want to stay well under.</p>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../scan-to-pdf/">Scan to PDF</a> — start the chain with your phone camera</li>
+      <li><a href="../redact-pdf/">Redact PDF</a> — remove content permanently</li>
+      <li><a href="../organize-pdf/">Organize PDF</a> — reorder pages visually</li>
+      <li><a href="../">All 14 tools</a></li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../roadmap/">Roadmap</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../vendor/pdf.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+
+  var source = null;      // { name, bytes, pages }
+  var steps = [];         // [{ type, opts }]
+  var seq = 0;
+
+  var stepsEl = K.$('#steps'), noteEl = K.$('#fileNote'), stepNote = K.$('#stepNote');
+  var countEl = K.$('#count'), goBtn = K.$('#go'), clearBtn = K.$('#clear');
+  var progEl = K.$('#prog'), msgEl = K.$('#msg'), fileMsgEl = K.$('#fileMsg');
+  var stepMsgEl = K.$('#stepMsg'), resultEl = K.$('#result');
+
+  /* ---------------------------------------------------------------- input */
+
+  K.dropzone(K.$('#drop'), {
+    accept: '.pdf,application/pdf,image/jpeg,image/png,.jpg,.jpeg,.png',
+    multiple: true,
+    match: function (f) { return K.isPdf(f) || /\.(jpe?g|png)$/i.test(f.name) || /^image\/(jpeg|png)$/.test(f.type); },
+    onFiles: load
+  });
+
+  async function load(files) {
+    var bar = K.progress(progEl);
+    try {
+      var pdfs = files.filter(K.isPdf);
+      var imgs = files.filter(function (f) { return !K.isPdf(f); });
+
+      if (pdfs.length && imgs.length) {
+        K.say(fileMsgEl, 'warn', 'Mixed PDFs and images — using the first PDF and ignoring the images. Convert the images separately, then merge.');
+      }
+
+      var bytes, name;
+      if (pdfs.length) {
+        K.say(fileMsgEl, 'info', 'Reading “' + pdfs[0].name + '”…');
+        bytes = await K.read(pdfs[0]);
+        name = pdfs[0].name;
+      } else {
+        K.say(fileMsgEl, 'info', 'Assembling ' + imgs.length + ' image' + (imgs.length > 1 ? 's' : '') + ' into a PDF…');
+        var payload = [];
+        for (var i = 0; i < imgs.length; i++) {
+          bar.set(i / imgs.length * 0.8);
+          payload.push({
+            name: imgs[i].name,
+            type: /\.png$/i.test(imgs[i].name) || imgs[i].type === 'image/png' ? 'png' : 'jpg',
+            bytes: await K.read(imgs[i])
+          });
+          await K.tick();
+        }
+        var built = await ops.imagesToPdf(payload, { pageSize: 'fit' });
+        bytes = built.bytes;
+        name = (imgs.length === 1 ? imgs[0].name.replace(/\.[^.]+$/, '') : 'images') + '.pdf';
+        if (built.skipped.length) {
+          K.say(fileMsgEl, 'warn', built.skipped.length + ' image(s) could not be read and were left out.');
+        }
+      }
+
+      var info = await ops.describe(bytes, name);
+      source = { name: name, bytes: bytes, pages: info.pages };
+      if (!K.$('#fileMsg').textContent) K.say(fileMsgEl, '', null);
+      var warn = K.sizeWarning(bytes.length * 2);   // a chain holds intermediates too
+      if (warn) K.say(fileMsgEl, 'warn', warn);
+
+    } catch (err) {
+      source = null;
+      K.say(fileMsgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+    }
+    render();
+  }
+
+  /* ------------------------------------------------------------ the steps */
+
+  function num(v, fallback) { var n = parseFloat(v); return isNaN(n) ? fallback : n; }
+
+  /**
+   * Each step type declares its label, its defaults, the settings it draws,
+   * a one-line summary for the run log, and how it transforms bytes.
+   * Adding a tool to the workspace means adding one entry here.
+   */
+  var TYPES = {
+    rotate: {
+      label: 'Rotate',
+      defaults: { angle: 90, ranges: 'all' },
+      summary: function (o) { return 'turn ' + o.angle + '° · ' + o.ranges; },
+      fields: [
+        { key: 'angle', label: 'Turn', type: 'seg', options: [[90, '90° right'], [270, '90° left'], [180, '180°']] },
+        { key: 'ranges', label: 'Pages', type: 'text', placeholder: 'all, or 1-3' }
+      ],
+      apply: async function (bytes, o) {
+        return (await ops.rotate(bytes, {
+          angle: num(o.angle, 90),
+          ranges: /^all$/i.test(String(o.ranges).trim()) ? null : o.ranges
+        })).bytes;
+      }
+    },
+
+    pages: {
+      label: 'Keep or remove pages',
+      defaults: { mode: 'keep', ranges: '1-' },
+      summary: function (o) { return o.mode + ' ' + o.ranges; },
+      fields: [
+        { key: 'mode', label: 'Action', type: 'seg', options: [['keep', 'keep only these'], ['remove', 'remove these']] },
+        { key: 'ranges', label: 'Pages', type: 'text', placeholder: '1-3, 8, 12-' }
+      ],
+      apply: async function (bytes, o) {
+        var info = await ops.describe(bytes);
+        var picked = ops.parseRanges(o.ranges, info.pages).indices;
+        var order;
+        if (o.mode === 'keep') {
+          order = picked;
+        } else {
+          var drop = {};
+          picked.forEach(function (i) { drop[i] = true; });
+          order = [];
+          for (var i = 0; i < info.pages; i++) if (!drop[i]) order.push(i);
+        }
+        if (!order.length) throw new Error('that would leave no pages');
+        return (await ops.organize(bytes, { order: order })).bytes;
+      }
+    },
+
+    crop: {
+      label: 'Crop',
+      defaults: { top: 0, bottom: 0, left: 0, right: 0 },
+      summary: function (o) { return 'trim ' + [o.top, o.right, o.bottom, o.left].join('/') + '%'; },
+      fields: [
+        { key: 'top', label: 'Top %', type: 'range', min: 0, max: 45 },
+        { key: 'bottom', label: 'Bottom %', type: 'range', min: 0, max: 45 },
+        { key: 'left', label: 'Left %', type: 'range', min: 0, max: 45 },
+        { key: 'right', label: 'Right %', type: 'range', min: 0, max: 45 }
+      ],
+      apply: async function (bytes, o) {
+        return (await ops.crop(bytes, {
+          margins: {
+            top: num(o.top, 0) / 100, bottom: num(o.bottom, 0) / 100,
+            left: num(o.left, 0) / 100, right: num(o.right, 0) / 100
+          }
+        })).bytes;
+      }
+    },
+
+    numbers: {
+      label: 'Page numbers',
+      defaults: { position: 'bottom-centre', format: '{n}', start: 1, size: 11, ranges: 'all' },
+      summary: function (o) { return '“' + o.format.replace('{n}', o.start) + '” · ' + o.position.replace('-', ' '); },
+      fields: [
+        { key: 'position', label: 'Position', type: 'seg', options: [['bottom-centre', 'bottom centre'], ['bottom-right', 'bottom right'], ['top-right', 'top right']] },
+        { key: 'format', label: 'Wording', type: 'seg', options: [['{n}', '1'], ['- {n} -', '- 1 -'], ['Page {n}', 'Page 1'], ['{n} of {total}', '1 of 20']] },
+        { key: 'start', label: 'Start at', type: 'number' },
+        { key: 'size', label: 'Size (pt)', type: 'range', min: 6, max: 28 },
+        { key: 'ranges', label: 'Pages', type: 'text', placeholder: 'all, or 2- to skip a cover' }
+      ],
+      apply: async function (bytes, o) {
+        return (await ops.pageNumbers(bytes, {
+          position: o.position, format: o.format,
+          start: num(o.start, 1), size: num(o.size, 11),
+          ranges: /^all$/i.test(String(o.ranges).trim()) ? null : o.ranges
+        })).bytes;
+      }
+    },
+
+    watermark: {
+      label: 'Watermark',
+      defaults: { text: 'CONFIDENTIAL', opacity: 25, angle: 45, size: 48, tile: 'yes', color: '#d23b36' },
+      summary: function (o) { return '“' + o.text + '” at ' + o.opacity + '%'; },
+      fields: [
+        { key: 'text', label: 'Text', type: 'text', placeholder: 'DRAFT' },
+        { key: 'tile', label: 'Layout', type: 'seg', options: [['yes', 'repeat across'], ['no', 'once, centred']] },
+        { key: 'opacity', label: 'Opacity %', type: 'range', min: 2, max: 100 },
+        { key: 'angle', label: 'Angle °', type: 'range', min: 0, max: 90 },
+        { key: 'size', label: 'Size (pt)', type: 'range', min: 10, max: 140 },
+        { key: 'color', label: 'Colour', type: 'color' }
+      ],
+      apply: async function (bytes, o) {
+        if (!String(o.text).trim()) throw new Error('no watermark text');
+        return (await ops.stampPages(bytes, {
+          text: String(o.text).trim(), tile: o.tile === 'yes',
+          opacity: num(o.opacity, 25) / 100, angle: num(o.angle, 45),
+          size: num(o.size, 48), color: o.color, position: 'centre'
+        })).bytes;
+      }
+    },
+
+    sign: {
+      label: 'Signature',
+      defaults: { position: 'bottom-right', scale: 30, ranges: 'last', png: null },
+      summary: function (o) { return (o.png ? 'drawn' : 'not drawn yet') + ' · ' + o.ranges; },
+      custom: true,
+      apply: async function (bytes, o) {
+        if (!o.png) throw new Error('no signature was drawn');
+        return (await ops.stampPages(bytes, {
+          image: o.png, imageType: 'png', opacity: 1,
+          scale: num(o.scale, 30) / 100, position: o.position, ranges: o.ranges
+        })).bytes;
+      }
+    },
+
+    compress: {
+      label: 'Compress',
+      defaults: { dpi: 150, quality: 72 },
+      summary: function (o) { return o.dpi + ' dpi · quality ' + o.quality + '%'; },
+      fields: [
+        { key: 'dpi', label: 'Image detail', type: 'seg', options: [[96, 'screen · 96'], [150, 'ebook · 150'], [220, 'print · 220']] },
+        { key: 'quality', label: 'JPEG quality %', type: 'range', min: 40, max: 95 }
+      ],
+      apply: async function (bytes, o) {
+        return (await ops.compress(bytes, {
+          mode: 'images', dpi: num(o.dpi, 150), quality: num(o.quality, 72) / 100
+        }, K.codec)).bytes;
+      }
+    }
+  };
+
+  /* ------------------------------------------------------- settings fields */
+
+  function field(spec, opts, onChange) {
+    var id = 'f' + (++seq);
+    var wrap = K.el('div');
+
+    if (spec.type === 'seg') {
+      wrap.appendChild(K.el('span', { class: 'fldlabel', text: spec.label }));
+      var seg = K.el('div', { class: 'seg', role: 'group', 'aria-label': spec.label });
+      spec.options.forEach(function (pair) {
+        var b = K.el('button', {
+          type: 'button', text: pair[1],
+          'aria-pressed': String(String(opts[spec.key]) === String(pair[0])),
+          onclick: function () {
+            opts[spec.key] = pair[0];
+            K.$$('button', seg).forEach(function (o) {
+              o.setAttribute('aria-pressed', String(o === b));
+            });
+            onChange();
+          }
+        });
+        seg.appendChild(b);
+      });
+      wrap.appendChild(seg);
+      return wrap;
+    }
+
+    var label = K.el('label', { class: 'fld', for: id });
+    if (spec.type === 'range') {
+      var out = K.el('span', { text: String(opts[spec.key]) });
+      label.appendChild(document.createTextNode(spec.label + ' — '));
+      label.appendChild(out);
+      wrap.appendChild(label);
+      wrap.appendChild(K.el('input', {
+        type: 'range', id: id, min: spec.min, max: spec.max, value: opts[spec.key],
+        oninput: function () { opts[spec.key] = this.value; out.textContent = this.value; onChange(); }
+      }));
+      return wrap;
+    }
+
+    label.textContent = spec.label;
+    wrap.appendChild(label);
+    wrap.appendChild(K.el('input', {
+      type: spec.type === 'number' ? 'number' : (spec.type === 'color' ? 'color' : 'text'),
+      id: id, value: opts[spec.key], placeholder: spec.placeholder || null, spellcheck: 'false',
+      oninput: function () { opts[spec.key] = this.value; onChange(); }
+    }));
+    return wrap;
+  }
+
+  /** The signature step needs a drawing surface, so it draws its own body. */
+  function signatureBody(step, onChange) {
+    var box = K.el('div', { class: 'stack' });
+    var canvas = K.el('canvas', { class: 'wpad', width: 840, height: 300 });
+    var ctx = canvas.getContext('2d');
+    ctx.lineCap = ctx.lineJoin = 'round';
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#14171D';
+
+    var drawing = false, last = null, drawn = false;
+
+    function pt(e) {
+      var r = canvas.getBoundingClientRect();
+      var t = e.touches ? e.touches[0] : e;
+      return { x: (t.clientX - r.left) * (canvas.width / r.width), y: (t.clientY - r.top) * (canvas.height / r.height) };
+    }
+    function down(e) { e.preventDefault(); drawing = true; last = pt(e); }
+    function move(e) {
+      if (!drawing) return;
+      e.preventDefault();
+      var p = pt(e);
+      ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      last = p; drawn = true;
+    }
+    async function up() {
+      if (!drawing) return;
+      drawing = false;
+      if (drawn) { step.opts.png = await trim(); onChange(); }
+    }
+
+    canvas.addEventListener('pointerdown', down);
+    canvas.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    canvas.addEventListener('touchstart', down, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', up);
+
+    async function trim() {
+      var img = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      var minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0, found = false;
+      for (var y = 0; y < canvas.height; y++) {
+        for (var x = 0; x < canvas.width; x++) {
+          if (img[(y * canvas.width + x) * 4 + 3] > 8) {
+            found = true;
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (!found) return null;
+      var pad = 10;
+      minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+      maxX = Math.min(canvas.width - 1, maxX + pad); maxY = Math.min(canvas.height - 1, maxY + pad);
+      var out = document.createElement('canvas');
+      out.width = maxX - minX + 1; out.height = maxY - minY + 1;
+      out.getContext('2d').drawImage(canvas, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
+      var enc = await K.canvasToBytes(out, 'image/png');
+      return enc ? enc.bytes : null;
+    }
+
+    box.appendChild(K.el('span', { class: 'fldlabel', text: 'Draw your signature' }));
+    box.appendChild(canvas);
+    box.appendChild(K.el('button', {
+      class: 'btn ghost', type: 'button', text: 'Clear',
+      onclick: function () { ctx.clearRect(0, 0, canvas.width, canvas.height); drawn = false; step.opts.png = null; onChange(); }
+    }));
+
+    box.appendChild(field({ key: 'position', label: 'Position', type: 'seg', options: [['bottom-right', 'bottom right'], ['bottom-left', 'bottom left'], ['bottom-centre', 'bottom centre']] }, step.opts, onChange));
+    box.appendChild(field({ key: 'scale', label: 'Width % of page', type: 'range', min: 8, max: 80 }, step.opts, onChange));
+    box.appendChild(field({ key: 'ranges', label: 'Pages to sign', type: 'text', placeholder: 'last, all, or 3' }, step.opts, onChange));
+    return box;
+  }
+
+  /* ----------------------------------------------------------------- list */
+
+  function addStep(type) {
+    var def = TYPES[type];
+    var opts = {};
+    Object.keys(def.defaults).forEach(function (k) { opts[k] = def.defaults[k]; });
+    steps.push({ type: type, opts: opts });
+    render();
+  }
+
+  function move(i, d) {
+    var j = i + d;
+    if (j < 0 || j >= steps.length) return;
+    var t = steps[i]; steps[i] = steps[j]; steps[j] = t;
+    render();
+  }
+
+  function render() {
+    stepsEl.innerHTML = '';
+
+    steps.forEach(function (step, i) {
+      var def = TYPES[step.type];
+      var card = K.el('div', { class: 'step-card' });
+
+      var head = K.el('div', { class: 'sh' });
+      head.appendChild(K.el('span', { class: 'n', text: String(i + 1) }));
+      head.appendChild(K.el('h3', { text: def.label }));
+      var ctl = K.el('div', { class: 'ctl' });
+      ctl.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Move up', 'aria-label': 'Move ' + def.label + ' earlier',
+        disabled: i === 0 ? 'disabled' : null, onclick: function () { move(i, -1); }, text: '↑'
+      }));
+      ctl.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Move down', 'aria-label': 'Move ' + def.label + ' later',
+        disabled: i === steps.length - 1 ? 'disabled' : null, onclick: function () { move(i, 1); }, text: '↓'
+      }));
+      ctl.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Remove step', 'aria-label': 'Remove ' + def.label,
+        onclick: function () { steps.splice(i, 1); render(); }, text: '×'
+      }));
+      head.appendChild(ctl);
+      card.appendChild(head);
+
+      var body = K.el('div', { class: 'sb stack' });
+      if (def.custom) {
+        body.appendChild(signatureBody(step, summarise));
+      } else {
+        def.fields.forEach(function (spec) {
+          body.appendChild(field(spec, step.opts, summarise));
+        });
+      }
+      card.appendChild(body);
+      stepsEl.appendChild(card);
+    });
+
+    K.$('#panelSteps').hidden = !source;
+    K.$('#panelFile').classList.toggle('done', !!source);
+    noteEl.textContent = source ? source.pages + ' pages · ' + K.bytes(source.bytes.length) : 'nothing loaded';
+    clearBtn.disabled = !source;
+    summarise();
+  }
+
+  function summarise() {
+    stepNote.textContent = steps.length ? steps.length + ' step' + (steps.length === 1 ? '' : 's') : 'no steps yet';
+    if (!source) {
+      countEl.textContent = 'Load a document';
+      goBtn.disabled = true;
+      return;
+    }
+    countEl.innerHTML = steps.length
+      ? '<b>' + steps.length + '</b> step' + (steps.length === 1 ? '' : 's') + ' on ' + source.pages + ' pages'
+      : 'Add a step below';
+    goBtn.disabled = steps.length === 0;
+
+    var unsigned = steps.some(function (s) { return s.type === 'sign' && !s.opts.png; });
+    if (unsigned) K.say(stepMsgEl, 'warn', 'Draw a signature in the signature step before running.');
+    else if (steps.length && steps[steps.length - 1].type !== 'compress' && steps.some(function (s) { return s.type === 'compress'; })) {
+      K.say(stepMsgEl, 'info', 'Compress is not the last step. That works, but anything added after it will not be compressed.');
+    } else K.say(stepMsgEl, '', null);
+  }
+
+  K.$$('#adder button').forEach(function (b) {
+    b.addEventListener('click', function () { addStep(b.getAttribute('data-add')); });
+  });
+
+  clearBtn.addEventListener('click', function () {
+    source = null; steps = [];
+    resultEl.innerHTML = '';
+    K.say(msgEl, '', null); K.say(fileMsgEl, '', null); K.say(stepMsgEl, '', null);
+    render();
+  });
+
+  /* ------------------------------------------------------------------ run */
+
+  goBtn.addEventListener('click', async function () {
+    if (!source || !steps.length) return;
+    goBtn.disabled = true; clearBtn.disabled = true;
+    resultEl.innerHTML = '';
+    var bar = K.progress(progEl);
+    var log = [];
+
+    try {
+      var bytes = source.bytes;
+      var before = bytes.length;
+
+      for (var i = 0; i < steps.length; i++) {
+        var step = steps[i], def = TYPES[step.type];
+        K.say(msgEl, 'info', 'Step ' + (i + 1) + ' of ' + steps.length + ' — ' + def.label + '…');
+        bar.set(i / steps.length * 0.92);
+        await K.tick();
+
+        var sizeBefore = bytes.length;
+        try {
+          // Each step consumes the previous result. Nothing touches disk.
+          bytes = await def.apply(bytes, step.opts);
+        } catch (err) {
+          throw new Error('Step ' + (i + 1) + ', ' + def.label + ' — ' +
+            (err && err.friendly ? err.message : (err && err.message) || 'failed') +
+            '. Nothing was applied; your document is unchanged.');
+        }
+        log.push({ n: i + 1, label: def.label, note: def.summary(step.opts), delta: bytes.length - sizeBefore });
+      }
+
+      bar.set(1);
+      var info = await ops.describe(bytes, source.name);
+      var name = source.name.replace(/\.pdf$/i, '') + '_kagaz.pdf';
+
+      K.say(msgEl, 'good', steps.length + ' step' + (steps.length === 1 ? '' : 's') +
+        ' applied · ' + info.pages + ' pages · ' + K.bytes(before) + ' → ' + K.bytes(bytes.length) + '.');
+      showResult(before, bytes.length, info, log);
+      K.download(bytes, name);
+
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      goBtn.disabled = steps.length === 0;
+      clearBtn.disabled = !source;
+    }
+  });
+
+  function showResult(before, after, info, log) {
+    var box = K.el('div', { class: 'result' });
+    var figs = K.el('div', { class: 'figures' });
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b>' + info.pages + '</b>pages' }));
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b>' + K.bytes(before) + '</b>in' }));
+    figs.appendChild(K.el('div', { class: 'fig', html: '<b class="' + (after < before ? 'win' : '') + '">' + K.bytes(after) + '</b>out' }));
+    box.appendChild(figs);
+
+    var table = K.el('table', { class: 'report' });
+    table.appendChild(K.el('tr', {}, [
+      K.el('th', { text: '#' }), K.el('th', { text: 'Step' }),
+      K.el('th', { text: 'Settings' }), K.el('th', { text: 'Size change' })
+    ]));
+    log.forEach(function (row) {
+      table.appendChild(K.el('tr', {}, [
+        K.el('td', { text: String(row.n) }),
+        K.el('td', { text: row.label }),
+        K.el('td', { text: row.note }),
+        K.el('td', { text: (row.delta > 0 ? '+' : '') + K.bytes(Math.abs(row.delta)) })
+      ]));
+    });
+    box.appendChild(table);
+    resultEl.appendChild(box);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -244,8 +244,8 @@ await refuses('merge with one bad file in the middle', () => ops.merge([
 await succeeds('merge 2 files', async () => {
   const out = await ops.merge([{ name: 'a.pdf', bytes: good3 }, { name: 'b.pdf', bytes: good1 }]);
   const info = await inspect(out.bytes);
-  if (info.pages !== 4) return 'expected 4 pages, got ' + info.pages;
-  if (!info.hasText) return 'text did not survive the merge';
+  if (info.pages !== 4) throw new Error('expected 4 pages, got ' + info.pages);
+  if (!info.hasText) throw new Error('text did not survive the merge');
   return '4 pages, text intact';
 });
 
@@ -256,7 +256,7 @@ await succeeds('merge preserves mixed page sizes', async () => {
   const out = await ops.merge([{ name: 'a4', bytes: a4 }, { name: 'a3', bytes: a3 }, { name: 'tiny', bytes: tiny }]);
   const doc = await ops.load(out.bytes);
   const sizes = doc.getPages().map(p => Math.round(p.getSize().width));
-  if (sizes[0] === sizes[1]) return 'page sizes were normalised — they should differ';
+  if (sizes[0] === sizes[1]) throw new Error('page sizes were normalised — they should differ');
   return sizes.join(' / ') + ' pt wide';
 });
 
@@ -265,14 +265,14 @@ await succeeds('merge preserves rotation', async () => {
   const out = await ops.merge([{ name: 'r', bytes: rotated }, { name: 'n', bytes: good1 }]);
   const doc = await ops.load(out.bytes);
   const angle = doc.getPage(0).getRotation().angle;
-  if (angle !== 90) return 'rotation lost — expected 90, got ' + angle;
+  if (angle !== 90) throw new Error('rotation lost — expected 90, got ' + angle);
   return 'rotation kept at 90°';
 });
 
 await succeeds('merge 50 files', async () => {
   const items = Array.from({ length: 50 }, (_, i) => ({ name: 'f' + i + '.pdf', bytes: good3 }));
   const out = await ops.merge(items);
-  if (out.pages !== 150) return 'expected 150 pages, got ' + out.pages;
+  if (out.pages !== 150) throw new Error('expected 150 pages, got ' + out.pages);
   return '150 pages, ' + Math.round(out.bytes.length / 1024) + ' KB';
 });
 
@@ -281,7 +281,7 @@ await succeeds('merge honours per-file ranges', async () => {
     { name: 'a.pdf', bytes: good10, range: '1-3' },
     { name: 'b.pdf', bytes: good10, range: 'last' }
   ]);
-  if (out.pages !== 4) return 'expected 4 pages, got ' + out.pages;
+  if (out.pages !== 4) throw new Error('expected 4 pages, got ' + out.pages);
   return '4 pages from 20';
 });
 
@@ -303,16 +303,16 @@ group('Split');
 
 await succeeds('split into one file per page', async () => {
   const out = await ops.split(good10, 'each', {}, 'doc.pdf');
-  if (out.files.length !== 10) return 'expected 10 files, got ' + out.files.length;
+  if (out.files.length !== 10) throw new Error('expected 10 files, got ' + out.files.length);
   const first = await inspect(out.files[0].bytes);
-  if (first.pages !== 1) return 'first file has ' + first.pages + ' pages';
+  if (first.pages !== 1) throw new Error('first file has ' + first.pages + ' pages');
   return '10 files, names ' + out.files[0].name + ' … ' + out.files[9].name;
 });
 
 await succeeds('split every 3 pages leaves a short tail', async () => {
   const out = await ops.split(good10, 'every', { size: 3 }, 'doc.pdf');
-  if (out.files.length !== 4) return 'expected 4 files, got ' + out.files.length;
-  if (out.files[3].pages !== 1) return 'tail file should have 1 page, has ' + out.files[3].pages;
+  if (out.files.length !== 4) throw new Error('expected 4 files, got ' + out.files.length);
+  if (out.files[3].pages !== 1) throw new Error('tail file should have 1 page, has ' + out.files[3].pages);
   return '4 files: 3+3+3+1';
 });
 
@@ -323,21 +323,21 @@ await succeeds('split every 0 pages is treated as 1', async () => {
 
 await succeeds('split every 99999 pages gives one file', async () => {
   const out = await ops.split(good10, 'every', { size: 99999 }, 'doc.pdf');
-  if (out.files.length !== 1) return 'expected 1 file, got ' + out.files.length;
+  if (out.files.length !== 1) throw new Error('expected 1 file, got ' + out.files.length);
   return '1 file of 10 pages';
 });
 
 await succeeds('split at uneven breakpoints', async () => {
   const out = await ops.split(good10, 'at', { at: '4, 8' }, 'doc.pdf');
   const shape = out.files.map(f => f.pages).join('+');
-  if (shape !== '3+4+3') return 'expected 3+4+3, got ' + shape;
+  if (shape !== '3+4+3') throw new Error('expected 3+4+3, got ' + shape);
   return shape;
 });
 
 await succeeds('extract a range', async () => {
   const out = await ops.split(good10, 'extract', { ranges: '2-4, 9' }, 'doc.pdf');
-  if (out.files.length !== 1) return 'expected a single file';
-  if (out.files[0].pages !== 4) return 'expected 4 pages, got ' + out.files[0].pages;
+  if (out.files.length !== 1) throw new Error('expected a single file');
+  if (out.files[0].pages !== 4) throw new Error('expected 4 pages, got ' + out.files[0].pages);
   return '4 pages in one file';
 });
 
@@ -349,9 +349,9 @@ await succeeds('split neutralises path traversal in filenames', async () => {
   for (const name of nasty) {
     const out = await ops.split(good1, 'each', {}, name);
     const entry = out.files[0].name;
-    if (/[\\/]/.test(entry)) return 'a separator survived in "' + entry + '" (from ' + name + ')';
-    if (entry.includes('..')) return 'a ".." segment survived in "' + entry + '"';
-    if (entry.startsWith('.')) return 'a leading dot survived in "' + entry + '"';
+    if (/[\\/]/.test(entry)) throw new Error('a separator survived in "' + entry + '" (from ' + name + ')');
+    if (entry.includes('..')) throw new Error('a ".." segment survived in "' + entry + '"');
+    if (entry.startsWith('.')) throw new Error('a leading dot survived in "' + entry + '"');
   }
   return nasty.length + ' hostile filenames neutralised';
 });
@@ -363,16 +363,16 @@ group('Compression — structure and safety');
 await succeeds('structural pass on a text-only PDF', async () => {
   const out = await ops.compress(good10, { mode: 'structural', name: 'doc.pdf' });
   const info = await inspect(out.bytes);
-  if (!info.hasText) return 'text was destroyed by a lossless pass';
-  if (info.pages !== 10) return 'page count changed';
+  if (!info.hasText) throw new Error('text was destroyed by a lossless pass');
+  if (info.pages !== 10) throw new Error('page count changed');
   return out.before + ' → ' + out.after + ' bytes, text intact';
 });
 
 await succeeds('image mode on a PDF with no images does nothing harmful', async () => {
   const out = await ops.compress(good3, { mode: 'images', name: 'doc.pdf' }, stubCodec);
-  if (out.stats.images !== 0) return 'found phantom images';
+  if (out.stats.images !== 0) throw new Error('found phantom images');
   const info = await inspect(out.bytes);
-  if (!info.hasText) return 'text was destroyed';
+  if (!info.hasText) throw new Error('text was destroyed');
   return 'no images found, text intact';
 });
 
@@ -402,30 +402,30 @@ if (sharp) {
   await succeeds('image-heavy PDF shrinks substantially', async () => {
     const out = await ops.compress(imagey, { mode: 'images', dpi: 150, quality: 0.72, name: 'big.pdf' }, realCodec);
     const cut = Math.round(100 - (out.after / out.before) * 100);
-    if (cut < 40) return 'only ' + cut + '% saved — expected far more on an image-heavy file';
+    if (cut < 40) throw new Error('only ' + cut + '% saved — expected far more on an image-heavy file');
     return Math.round(out.before / 1024) + ' KB → ' + Math.round(out.after / 1024) + ' KB (' + cut + '% off)';
   });
 
   await succeeds('text survives image compression', async () => {
     const out = await ops.compress(imagey, { mode: 'images', dpi: 150, quality: 0.72 }, realCodec);
     const info = await inspect(out.bytes);
-    if (!info.hasText) return 'THE TEXT WAS DESTROYED — this is the bug the whole tool exists to avoid';
-    if (info.images !== 3) return 'image count changed from 3 to ' + info.images;
-    if (info.pages !== 3) return 'page count changed';
+    if (!info.hasText) throw new Error('THE TEXT WAS DESTROYED — this is the bug the whole tool exists to avoid');
+    if (info.images !== 3) throw new Error('image count changed from 3 to ' + info.images);
+    if (info.pages !== 3) throw new Error('page count changed');
     return '3 pages, 3 images, text still selectable';
   });
 
   await succeeds('output re-opens and can be compressed again', async () => {
     const once = await ops.compress(imagey, { mode: 'images', dpi: 150, quality: 0.72 }, realCodec);
     const twice = await ops.compress(once.bytes, { mode: 'images', dpi: 96, quality: 0.6 }, realCodec);
-    if (twice.after > once.after) return 'second pass made it bigger';
+    if (twice.after > once.after) throw new Error('second pass made it bigger');
     return Math.round(once.after / 1024) + ' KB → ' + Math.round(twice.after / 1024) + ' KB';
   });
 
   await succeeds('higher dpi produces a larger file than lower dpi', async () => {
     const low = await ops.compress(imagey, { mode: 'images', dpi: 96, quality: 0.72 }, realCodec);
     const high = await ops.compress(imagey, { mode: 'images', dpi: 220, quality: 0.72 }, realCodec);
-    if (high.after <= low.after) return 'dpi setting had no effect';
+    if (high.after <= low.after) throw new Error('dpi setting had no effect');
     return '96 dpi ' + Math.round(low.after / 1024) + ' KB · 220 dpi ' + Math.round(high.after / 1024) + ' KB';
   });
 
@@ -435,8 +435,8 @@ if (sharp) {
     const img = await doc.embedJpg(cmyk);
     doc.addPage([595, 842]).drawImage(img, { x: 0, y: 0, width: 595, height: 842 });
     const out = await ops.compress(await doc.save(), { mode: 'images', dpi: 150, quality: 0.7 }, realCodec);
-    if (out.stats.changed !== 0) return 'a CMYK image was re-encoded — colours would shift on print';
-    if (!out.stats.skipped.length) return 'no reason was recorded for skipping';
+    if (out.stats.changed !== 0) throw new Error('a CMYK image was re-encoded — colours would shift on print');
+    if (!out.stats.skipped.length) throw new Error('no reason was recorded for skipping');
     return 'skipped: ' + out.stats.skipped[0].reason;
   });
 }
@@ -471,28 +471,28 @@ const withImage = await (async () => {
 
 await succeeds('codec returning null leaves the image alone', async () => {
   const out = await ops.compress(withImage, { mode: 'images', dpi: 96, quality: 0.5 }, nullCodec);
-  if (out.stats.changed !== 0) return 'something was changed despite the codec declining';
+  if (out.stats.changed !== 0) throw new Error('something was changed despite the codec declining');
   const info = await inspect(out.bytes);
-  if (info.images !== 1) return 'the image vanished';
+  if (info.images !== 1) throw new Error('the image vanished');
   return 'image preserved, ' + out.stats.skipped.length + ' skip recorded';
 });
 
 await succeeds('codec that throws is caught per image', async () => {
   const out = await ops.compress(withImage, { mode: 'images', dpi: 96, quality: 0.5 }, throwingCodec);
-  if (out.stats.changed !== 0) return 'changed an image despite the codec throwing';
-  if (!out.stats.skipped.some(s => /error/.test(s.reason))) return 'the error was not recorded';
+  if (out.stats.changed !== 0) throw new Error('changed an image despite the codec throwing');
+  if (!out.stats.skipped.some(s => /error/.test(s.reason))) throw new Error('the error was not recorded');
   return 'error caught and reported, file still valid';
 });
 
 await succeeds('codec producing a larger image is rejected', async () => {
   const out = await ops.compress(withImage, { mode: 'images', dpi: 96, quality: 0.5 }, inflatingCodec);
-  if (out.stats.changed !== 0) return 'accepted a replacement that was bigger than the original';
+  if (out.stats.changed !== 0) throw new Error('accepted a replacement that was bigger than the original');
   return 'inflation rejected';
 });
 
 await succeeds('missing codec falls back to structural', async () => {
   const out = await ops.compress(withImage, { mode: 'images', dpi: 96 }, null);
-  if (out.stats.changed !== 0) return 'changed images without a codec';
+  if (out.stats.changed !== 0) throw new Error('changed images without a codec');
   return 'degraded gracefully';
 });
 
@@ -505,8 +505,8 @@ await succeeds('2000-page document', async () => {
   const started = Date.now();
   const out = await ops.split(big, 'extract', { ranges: '1000-1010' }, 'big.pdf');
   const took = Date.now() - started;
-  if (out.files[0].pages !== 11) return 'expected 11 pages, got ' + out.files[0].pages;
-  if (took > 30000) return 'took ' + took + ' ms — too slow';
+  if (out.files[0].pages !== 11) throw new Error('expected 11 pages, got ' + out.files[0].pages);
+  if (took > 30000) throw new Error('took ' + took + ' ms — too slow');
   return '11 pages extracted from 2000 in ' + took + ' ms';
 });
 
@@ -519,7 +519,7 @@ await succeeds('absurdly large page size', async () => {
 await succeeds('one-point page', async () => {
   const tiny = await makePdf(1, { size: [1, 1], fontSize: 1 });
   const out = await ops.compress(tiny, { mode: 'images', dpi: 150 }, stubCodec);
-  if (out.stats.maxEdge < 320) return 'maxEdge collapsed to ' + out.stats.maxEdge;
+  if (out.stats.maxEdge < 320) throw new Error('maxEdge collapsed to ' + out.stats.maxEdge);
   return 'maxEdge floored at ' + out.stats.maxEdge + ' px';
 });
 
@@ -530,21 +530,21 @@ await succeeds('all four rotations survive a round trip', async () => {
     const out = await ops.merge([{ name: 'r.pdf', bytes: src }]);
     const doc = await ops.load(out.bytes);
     const got = doc.getPage(0).getRotation().angle;
-    if (got !== angle) return 'rotation ' + angle + '° became ' + got + '°';
+    if (got !== angle) throw new Error('rotation ' + angle + '° became ' + got + '°');
   }
   return '0/90/180/270 all preserved';
 });
 
 await succeeds('splitting a single-page document', async () => {
   const out = await ops.split(good1, 'each', {}, 'one.pdf');
-  if (out.files.length !== 1) return 'expected 1 file';
+  if (out.files.length !== 1) throw new Error('expected 1 file');
   return '1 file';
 });
 
 await succeeds('describe() reports a sane summary', async () => {
   const info = await ops.describe(good10, 'doc.pdf');
-  if (info.pages !== 10) return 'wrong page count';
-  if (typeof info.images !== 'number') return 'image count missing';
+  if (info.pages !== 10) throw new Error('wrong page count');
+  if (typeof info.images !== 'number') throw new Error('image count missing');
   return info.pages + ' pages, ' + info.images + ' images, ' + Object.keys(info.sizes).length + ' distinct size';
 });
 
@@ -556,7 +556,7 @@ await succeeds('rotate every page by 90', async () => {
   const out = await ops.rotate(good10, { angle: 90 });
   const doc = await ops.load(out.bytes);
   const angles = doc.getPages().map(p => p.getRotation().angle);
-  if (!angles.every(a => a === 90)) return 'got ' + [...new Set(angles)].join(',');
+  if (!angles.every(a => a === 90)) throw new Error('got ' + [...new Set(angles)].join(','));
   return '10 pages at 90 degrees';
 });
 
@@ -565,32 +565,32 @@ await succeeds('rotation is relative, not absolute', async () => {
   const twice = await ops.rotate(once.bytes, { angle: 90 });
   const doc = await ops.load(twice.bytes);
   const a = doc.getPage(0).getRotation().angle;
-  if (a !== 180) return '90 + 90 gave ' + a + ' degrees';
+  if (a !== 180) throw new Error('90 + 90 gave ' + a + ' degrees');
   return '90 + 90 = 180';
 });
 
 await succeeds('rotating a range leaves the rest alone', async () => {
   const out = await ops.rotate(good10, { angle: 270, absolute: true, ranges: '1-2' });
   const doc = await ops.load(out.bytes);
-  if (doc.getPage(0).getRotation().angle !== 270) return 'page 1 was not turned';
-  if (doc.getPage(5).getRotation().angle !== 0) return 'the rotation leaked past the range';
+  if (doc.getPage(0).getRotation().angle !== 270) throw new Error('page 1 was not turned');
+  if (doc.getPage(5).getRotation().angle !== 0) throw new Error('the rotation leaked past the range');
   return 'pages 1-2 only';
 });
 
 await succeeds('organise reorders, deletes and duplicates', async () => {
   const reversed = await ops.organize(good10, { order: [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] });
-  if (reversed.pages !== 10) return 'reverse changed the count';
+  if (reversed.pages !== 10) throw new Error('reverse changed the count');
   const fewer = await ops.organize(good10, { order: [0, 2, 4] });
-  if (fewer.pages !== 3) return 'delete gave ' + fewer.pages + ' pages';
+  if (fewer.pages !== 3) throw new Error('delete gave ' + fewer.pages + ' pages');
   const dup = await ops.organize(good3, { order: [0, 0, 0, 0] });
-  if (dup.pages !== 4) return 'duplicate gave ' + dup.pages + ' pages';
+  if (dup.pages !== 4) throw new Error('duplicate gave ' + dup.pages + ' pages');
   return 'reverse / 10→3 / 1→4';
 });
 
 await succeeds('organise applies per-page rotation', async () => {
   const out = await ops.organize(good3, { order: [1], rotations: { 1: 90 } });
   const doc = await ops.load(out.bytes);
-  if (doc.getPage(0).getRotation().angle !== 90) return 'rotation was not applied';
+  if (doc.getPage(0).getRotation().angle !== 90) throw new Error('rotation was not applied');
   return 'single page kept and turned';
 });
 
@@ -601,8 +601,8 @@ await succeeds('crop sets a smaller CropBox', async () => {
   const out = await ops.crop(good3, { margins: { left: 0.1, right: 0.1, top: 0.05, bottom: 0.05 } });
   const doc = await ops.load(out.bytes);
   const box = doc.getPage(0).getCropBox();
-  if (Math.abs(box.width - 595.28 * 0.8) > 1) return 'width came out ' + box.width.toFixed(1);
-  if (Math.abs(box.height - 841.89 * 0.9) > 1) return 'height came out ' + box.height.toFixed(1);
+  if (Math.abs(box.width - 595.28 * 0.8) > 1) throw new Error('width came out ' + box.width.toFixed(1));
+  if (Math.abs(box.height - 841.89 * 0.9) > 1) throw new Error('height came out ' + box.height.toFixed(1));
   return Math.round(box.width) + '×' + Math.round(box.height) + ' pt';
 });
 
@@ -612,7 +612,7 @@ await succeeds('crop clamps absurd margins instead of producing nothing', async 
   const out = await ops.crop(good3, { margins: { left: 9, right: 9, top: 9, bottom: 9 } });
   const doc = await ops.load(out.bytes);
   const box = doc.getPage(0).getCropBox();
-  if (box.width < 1 || box.height < 1) return 'produced an empty page';
+  if (box.width < 1 || box.height < 1) throw new Error('produced an empty page');
   return 'clamped to ' + Math.round(box.width) + '×' + Math.round(box.height) + ' pt';
 });
 
@@ -620,15 +620,15 @@ group('Page numbers and stamps');
 
 await succeeds('numbers every page', async () => {
   const out = await ops.pageNumbers(good10, { format: '{n} of {total}' });
-  if (out.numbered !== 10) return 'numbered ' + out.numbered;
+  if (out.numbered !== 10) throw new Error('numbered ' + out.numbered);
   const info = await inspect(out.bytes);
-  if (info.pages !== 10) return 'page count changed';
+  if (info.pages !== 10) throw new Error('page count changed');
   return '10 numbered, "1 of 10"';
 });
 
 await succeeds('numbers a range with a custom start', async () => {
   const out = await ops.pageNumbers(good10, { ranges: '3-', start: 1, position: 'top-right' });
-  if (out.numbered !== 8) return 'numbered ' + out.numbered;
+  if (out.numbered !== 8) throw new Error('numbered ' + out.numbered);
   return 'pages 3-10 numbered from 1';
 });
 
@@ -636,13 +636,13 @@ await refuses('numbering an empty selection', () => ops.pageNumbers(good3, { ran
 
 await succeeds('tiled text watermark', async () => {
   const out = await ops.stampPages(good3, { text: 'CONFIDENTIAL', tile: true, opacity: 0.2, angle: 45, size: 36 });
-  if (out.stamped !== 3) return 'stamped ' + out.stamped;
+  if (out.stamped !== 3) throw new Error('stamped ' + out.stamped);
   return '3 pages, ' + Math.round(out.bytes.length / 1024) + ' KB';
 });
 
 await succeeds('single positioned stamp', async () => {
   const out = await ops.stampPages(good3, { text: 'DRAFT', tile: false, position: 'bottom-right', opacity: 0.5 });
-  if (out.stamped !== 3) return 'stamped ' + out.stamped;
+  if (out.stamped !== 3) throw new Error('stamped ' + out.stamped);
   return 'bottom right on 3 pages';
 });
 
@@ -653,7 +653,7 @@ await succeeds('signature on the last page only', async () => {
   // A 1x1 PNG is enough to prove the placement path works.
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   const out = await ops.stampPages(good10, { image: new Uint8Array(png), imageType: 'png', ranges: 'last', opacity: 1, scale: 0.25 });
-  if (out.stamped !== 1) return 'stamped ' + out.stamped + ' pages';
+  if (out.stamped !== 1) throw new Error('stamped ' + out.stamped + ' pages');
   return 'one page signed';
 });
 
@@ -669,8 +669,8 @@ await succeeds('one unreadable image does not lose the rest', async () => {
     { name: 'junk.png', bytes: new Uint8Array([1, 2, 3]), type: 'png' },
     { name: 'good2.png', bytes: png, type: 'png' }
   ], { pageSize: 'a4' });
-  if (out.pages !== 2) return 'expected 2 pages, got ' + out.pages;
-  if (out.skipped.length !== 1) return 'expected 1 skip, got ' + out.skipped.length;
+  if (out.pages !== 2) throw new Error('expected 2 pages, got ' + out.pages);
+  if (out.skipped.length !== 1) throw new Error('expected 1 skip, got ' + out.skipped.length);
   return '2 pages kept, 1 skipped: ' + out.skipped[0].reason;
 });
 
@@ -693,10 +693,88 @@ await succeeds('only marked pages are flattened', async () => {
     areas: [{ page: 1, x: 0.1, y: 0.1, w: 0.3, h: 0.05 }, { page: 4, x: 0.2, y: 0.4, w: 0.4, h: 0.1 }]
   }, async (i) => { rendered.push(i); return { data: jpeg }; });
 
-  if (out.flattened !== 2) return 'flattened ' + out.flattened + ' pages';
-  if (rendered.join() !== '1,4') return 'rendered the wrong pages: ' + rendered.join();
-  if (out.pages !== 10) return 'page count became ' + out.pages;
+  if (out.flattened !== 2) throw new Error('flattened ' + out.flattened + ' pages');
+  if (rendered.join() !== '1,4') throw new Error('rendered the wrong pages: ' + rendered.join());
+  if (out.pages !== 10) throw new Error('page count became ' + out.pages);
   return '2 of 10 pages flattened, 8 kept intact';
+});
+
+/* --------------------------------------------------- chaining (the workspace) */
+
+group('Chained operations');
+
+/**
+ * The workspace is a fold: each step consumes the previous result. If any
+ * operation returns something the next one cannot read, the chain is where
+ * it shows up — so exercise a realistic pipeline end to end.
+ */
+await succeeds('a seven-step chain survives intact', async () => {
+  const png = new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+  let bytes = good10;
+  const trail = [];
+
+  bytes = (await ops.rotate(bytes, { angle: 90, ranges: '1-3' })).bytes;              trail.push('rotate');
+  bytes = (await ops.organize(bytes, { order: [0, 1, 2, 3, 4, 5, 6, 7] })).bytes;      trail.push('drop 2 pages');
+  bytes = (await ops.crop(bytes, { margins: { left: 0.05, right: 0.05 } })).bytes;     trail.push('crop');
+  bytes = (await ops.pageNumbers(bytes, { format: '{n} of {total}' })).bytes;          trail.push('numbers');
+  bytes = (await ops.stampPages(bytes, { text: 'DRAFT', tile: true, opacity: 0.2 })).bytes;  trail.push('watermark');
+  bytes = (await ops.stampPages(bytes, { image: png, imageType: 'png', ranges: 'last', opacity: 1 })).bytes; trail.push('signature');
+  bytes = (await ops.compress(bytes, { mode: 'structural' })).bytes;                  trail.push('compress');
+
+  const info = await ops.describe(bytes, 'chained.pdf');
+  if (info.pages !== 8) throw new Error('expected 8 pages after the chain, got ' + info.pages);
+
+  const check = await inspect(bytes);
+  if (!check.hasText) throw new Error('text did not survive the chain');
+
+  const doc = await ops.load(bytes);
+  if (doc.getPage(0).getRotation().angle !== 90) throw new Error('the rotation from step 1 was lost by step 7');
+
+  // Rotation is a display attribute — it does not swap the page's own box.
+  // So a portrait page rotated to landscape still crops against its portrait width.
+  const box = doc.getPage(0).getCropBox();
+  if (Math.abs(box.width - 595.28 * 0.9) > 2) throw new Error('the crop from step 3 was lost, box is ' + box.width.toFixed(0));
+
+  return trail.join(' → ') + ' · 8 pages, text intact';
+});
+
+await succeeds('a failing step leaves the previous result usable', async () => {
+  let bytes = (await ops.rotate(good3, { angle: 90 })).bytes;
+  const beforeFailure = bytes;
+  try {
+    // Ask for pages that do not exist — this is what a mistyped range does.
+    await ops.pageNumbers(bytes, { ranges: '80-90' });
+    return 'the bad step did not fail';
+  } catch (err) {
+    if (!err.friendly) throw new Error('the failure was not a KagazError');
+  }
+  const info = await ops.describe(beforeFailure, 'still-fine.pdf');
+  if (info.pages !== 3) throw new Error('the earlier result was damaged');
+  return 'chain stopped cleanly, earlier result still opens';
+});
+
+await succeeds('order changes the outcome, as the interface warns', async () => {
+  // Numbering then cropping the numbers away should differ from cropping first.
+  const numberedThenCropped = (await ops.crop(
+    (await ops.pageNumbers(good3, {})).bytes, { margins: { bottom: 0.2 } })).bytes;
+  const croppedThenNumbered = (await ops.pageNumbers(
+    (await ops.crop(good3, { margins: { bottom: 0.2 } })).bytes, {})).bytes;
+  if (!numberedThenCropped.length || !croppedThenNumbered.length) throw new Error('one order produced nothing');
+  const a = await ops.describe(numberedThenCropped), b = await ops.describe(croppedThenNumbered);
+  if (a.pages !== b.pages) throw new Error('page counts diverged');
+  return 'both orders produce valid ' + a.pages + '-page files';
+});
+
+await succeeds('images to PDF can start a chain', async () => {
+  const png = new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+  let bytes = (await ops.imagesToPdf([
+    { name: 'a.png', bytes: png, type: 'png' }, { name: 'b.png', bytes: png, type: 'png' }
+  ], { pageSize: 'a4' })).bytes;
+  bytes = (await ops.rotate(bytes, { angle: 180 })).bytes;
+  bytes = (await ops.pageNumbers(bytes, {})).bytes;
+  const info = await ops.describe(bytes, 'from-images.pdf');
+  if (info.pages !== 2) throw new Error('expected 2 pages, got ' + info.pages);
+  return 'photo → PDF → rotate → number';
 });
 
 /* --------------------------------------------------------------------- report */

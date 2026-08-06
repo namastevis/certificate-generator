@@ -28,6 +28,10 @@ Live at **[kagaz.namastevis.in](https://kagaz.namastevis.in)** · MIT licensed �
 [Watermark](https://kagaz.namastevis.in/watermark-pdf/) ·
 [Page numbers](https://kagaz.namastevis.in/page-numbers/)
 
+**Several jobs at once** — [Workspace](https://kagaz.namastevis.in/workspace/) — load a document
+once, stack operations, download at the end. Everything stays in memory; nothing is written to disk
+between steps.
+
 **Batch** — [Certificate Press](https://kagaz.namastevis.in/certificate/) — one design × many
 names, from a spreadsheet.
 
@@ -98,6 +102,7 @@ roadmap/                what exists, what is coming, what never will
 merge-pdf/ split-pdf/ compress-pdf/ pdf-to-jpg/ jpg-to-pdf/
 organize-pdf/ rotate-pdf/ crop-pdf/ page-numbers/
 watermark-pdf/ sign-pdf/ scan-to-pdf/ redact-pdf/
+workspace/              load once, stack operations, download at the end
 certificate/            Certificate Press
 contribute/             how to help, and where to send a chai
 test/                   in-browser test bench
@@ -114,8 +119,8 @@ No framework, no bundler, no build step. Clone it and open a file.
 ## Tests
 
 ```bash
-node tests/stress.mjs     # 85 checks on the PDF engine
-node tests/verify.mjs     # 65 checks on the site itself
+node tests/stress.mjs     # 89 checks on the PDF engine
+node tests/verify.mjs     # 67 checks on the site itself
 ```
 
 The first covers malformed input, hostile filenames, page-range parsing, merge and split
