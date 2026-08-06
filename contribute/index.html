@@ -119,18 +119,35 @@ tests/verify.mjs        fails the build if any page loads an external asset</cod
       Nothing on that page sends anything by itself. It builds a link and waits for you to press it.
     </p>
 
-    <h2>Running the tests</h2>
-    <pre><code>node tests/stress.mjs</code></pre>
+    <h2>Running the checks</h2>
+    <pre><code>npm run check</code></pre>
     <p>
-      This throws deliberately awful PDFs at <code>shared/ops.js</code> — zero-byte files, truncated
-      files, a JPEG renamed to <code>.pdf</code>, encrypted documents, a two-thousand-page monster,
-      pages of impossible sizes — and checks that each one fails cleanly with a message a human
-      could act on, rather than crashing or producing a broken file.
+      Three suites, and none of them need a single dependency — clone the repository and they run:
+    </p>
+    <ul>
+      <li><code>npm run lint</code> — <b>the project's own rules.</b> No network APIs, no persistent
+        storage, no assets from another origin, every inline script parses, every tool page links to
+        the report page.</li>
+      <li><code>npm run verify</code> — the site: dead links, metadata, mobile viewport, tap targets.</li>
+      <li><code>npm test</code> — the PDF engine against deliberately awful files: zero-byte,
+        truncated, a JPEG renamed to <code>.pdf</code>, encrypted, two thousand pages, impossible
+        page sizes, seven-step chains.</li>
+    </ul>
+    <p>
+      The linter is the one worth understanding. It does not check style — it checks that the
+      promises on the front page still match the code. Add a <code>fetch</code>, or reach for
+      <code>localStorage</code>, and the build fails telling you which claim you just broke. That is
+      deliberate: those two lines are the entire product, and they are far too easy to erode by
+      accident.
     </p>
     <p>
-      There is also <a href="../test/">an in-browser test page</a> that runs the same battery
-      against the real browser code, including the image compression that Node cannot exercise.
-      Open it after any change.
+      ESLint is configured but optional, and CI treats it as advisory. Style should never be the
+      reason a contribution is turned away.
+    </p>
+    <p>
+      There is also <a href="../test/">an in-browser test page</a> covering what Node cannot —
+      the canvas codec, <code>createImageBitmap</code>, and rendering. Open it after any change to
+      the shared helpers.
     </p>
 
   </section>

@@ -41,18 +41,33 @@ without them.
 4. Add a card to the grid in `index.html` and a link in the other tools' footer lists.
 5. Add cases to `tests/stress.mjs`.
 
-## Tests
+## Checks
 
 ```bash
-node tests/stress.mjs
+npm run check          # all three, no npm install needed
 ```
 
-Every test asserts one of two things: that an operation works, or that it **refuses cleanly**
-with a `KagazError` carrying a message a person could act on. A crash, a hang, or a silently
-broken output file is a failure. A polite refusal is a pass.
+Three suites, none of which require a single dependency — clone the repo and they run:
 
-If you touch anything in `shared/kagaz.js` or the compression path, also open `/test/` in a
-browser — it covers the canvas codec, `createImageBitmap` and rendering, which Node cannot.
+| | |
+|---|---|
+| `npm run lint` | The project's own rules: no network APIs, no persistent storage, no external assets, every inline script parses, every tool page links to `/report/`. |
+| `npm run verify` | The site: dead links, missing metadata, mobile viewport, tap targets, sitemap coverage. |
+| `npm test` | The PDF engine: malformed input, hostile filenames, page geometry, stamping, redaction, compression, chained operations, extreme documents. |
+
+Every test in the last one asserts one of two things: that an operation works, or
+that it **refuses cleanly** with a `KagazError` carrying a message a person could act on.
+A crash, a hang, or a silently broken output file is a failure. A polite refusal is a pass.
+
+`tests/lint.mjs` is the one to pay attention to. It does not check style — it checks that
+the promises on the front page still match the code. If you add `fetch`, `localStorage`, or a
+script from a CDN, it fails the build and tells you which claim you just broke.
+
+ESLint is configured but optional, and CI treats it as advisory. Style should never block a
+contribution.
+
+If you touch `shared/kagaz.js` or the compression path, also open `/test/` in a browser —
+it covers the canvas codec, `createImageBitmap` and rendering, which Node cannot.
 
 ## Style
 

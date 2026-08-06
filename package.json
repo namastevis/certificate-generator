@@ -1,0 +1,32 @@
+{
+  "name": "kagaz",
+  "version": "1.0.0",
+  "description": "Paper tools that never leave your browser. Browser-only PDF tools with no server.",
+  "homepage": "https://kagaz.namastevis.in",
+  "repository": { "type": "git", "url": "https://github.com/namastevis/kagaz.git" },
+  "author": "Amit Jena (https://namastevis.in)",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "test": "node tests/stress.mjs",
+    "verify": "node tests/verify.mjs",
+    "lint": "node tests/lint.mjs",
+    "check": "npm run lint && npm run verify && npm test",
+    "eslint": "eslint shared tests",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "//": [
+    "No \"type\": \"module\" here on purpose — shared/*.js and vendor/*.js are UMD, and",
+    "declaring the package as ESM makes Node refuse to require them. Tests use .mjs instead.",
+    "",
+    "The site itself has zero dependencies — vendor/ is committed and nothing is fetched.",
+    "Everything under scripts except `eslint` runs on a bare Node install, so `git clone`",
+    "and `npm run check` works without ever running `npm install`.",
+    "",
+    "`sharp` is optional. If it happens to be present, tests/stress.mjs uses it to exercise",
+    "the real image codec; without it a stub covers the same branches."
+  ]
+}

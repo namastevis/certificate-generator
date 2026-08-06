@@ -1,0 +1,50 @@
+name: checks
+
+# Kagaz has no build step, so CI is not here to compile anything. It is here to
+# stop the two things that would quietly ruin the project: a change that breaks
+# the PDF engine, and a change that breaks the promise on the front page.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # These three need no dependencies at all — that is the point.
+      - name: Project rules (no network, no storage, no external assets)
+        run: node tests/lint.mjs
+
+      - name: Site verification (links, metadata, mobile, origins)
+        run: node tests/verify.mjs
+
+      - name: PDF engine stress tests
+        run: node tests/stress.mjs
+
+      # sharp is optional; when present the real image codec gets exercised
+      # instead of the stub, which is worth the extra minute on main.
+      - name: Stress tests with a real image codec
+        if: github.event_name == 'push'
+        run: |
+          npm install --no-save sharp || echo "sharp unavailable — stub codec already covered above"
+          node tests/stress.mjs
+
+  eslint:
+    runs-on: ubuntu-latest
+    continue-on-error: true   # advisory: style should never block a contribution
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save eslint@^9
+      - run: npx eslint shared tests

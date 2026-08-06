@@ -111,28 +111,32 @@ shared/kagaz.js         browser helpers — drop zones, downloads, canvas codec,
 shared/ops.js           the PDF logic, deliberately DOM-free so Node can test it
 vendor/                 pdf-lib, pdf.js, JSZip, fontkit — vendored, never a CDN
 tests/stress.mjs        throws deliberately broken PDFs at shared/ops.js
-tests/verify.mjs        fails if any page loads an external asset
+tests/verify.mjs        site checks — links, metadata, mobile
+tests/lint.mjs          project rules — no network, no storage, no external assets
 ```
 
 No framework, no bundler, no build step. Clone it and open a file.
 
-## Tests
+## Checks
 
 ```bash
-node tests/stress.mjs     # 89 checks on the PDF engine
-node tests/verify.mjs     # 67 checks on the site itself
+npm run check     # lint + verify + tests, no npm install required
 ```
 
-The first covers malformed input, hostile filenames, page-range parsing, merge and split
-correctness, page geometry, stamping, redaction, compression safety and extreme documents.
-Every one asserts that Kagaz either works or **refuses cleanly with a message a person could
-act on** — a crash, a hang or a silently broken output file is a failure.
+- **`npm run lint`** — the project's own rules. No network APIs, no persistent storage, no
+  assets from another origin, every inline script parses, every tool page links to `/report/`.
+  This is the one that matters: it fails the build if the code stops matching the promises on
+  the front page.
+- **`npm run verify`** — 69 checks on the site: dead links, metadata, mobile viewport, tap
+  targets, sitemap coverage.
+- **`npm test`** — 89 checks on the PDF engine: malformed input, hostile filenames, page
+  geometry, stamping, redaction, compression safety, chained operations, extreme documents.
+  Every one asserts that Kagaz either works or **refuses cleanly with a message a person could
+  act on**.
 
-The second enforces the promise the whole project rests on: it **fails if any page loads an
-asset from another origin**, or if the shared scripts ever gain a `fetch`.
-
-`sharp` is picked up automatically if it happens to be installed, which exercises the real
-pixel path; without it a stub codec still covers every branch. Neither is required.
+All three run on a bare Node install. `sharp` is picked up automatically if present, which
+exercises the real image codec; without it a stub covers the same branches. ESLint is
+configured but optional and advisory.
 
 Then open [`/test/`](https://kagaz.namastevis.in/test/) in a browser for the parts Node
 cannot reach: the canvas codec, `createImageBitmap`, blob encoding and rendering.
