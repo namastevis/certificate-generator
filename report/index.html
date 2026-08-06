@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report a problem with Kagaz</title>
+<meta name="description" content="Something not working? Report it by email, on X, or as a GitHub issue. Your browser details are filled in for you, and nothing is sent unless you press send.">
+<link rel="canonical" href="https://kagaz.namastevis.in/report/">
+<meta property="og:title" content="Report a problem with Kagaz">
+<meta property="og:description" content="Three ways to report, no account required for two of them.">
+<meta property="og:url" content="https://kagaz.namastevis.in/report/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<style>
+  .ways3{display:grid; gap:12px; grid-template-columns:1fr; margin-top:6px}
+  @media (min-width:700px){ .ways3{grid-template-columns:1fr 1fr 1fr} }
+  .way{border:1px solid var(--line); background:#fff; border-radius:2px; padding:15px; display:flex; flex-direction:column; gap:8px}
+  .way h3{margin:0; font-size:15px}
+  .way p{margin:0; font-size:13.5px; color:var(--ink-soft); flex:1; line-height:1.55}
+  .way .btn{text-align:center; text-decoration:none; display:inline-flex; align-items:center; justify-content:center}
+  .way .who{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--blue)}
+  .ctx{font-family:var(--mono); font-size:12px; background:#f6f6f3; border:1px solid var(--line);
+       border-radius:2px; padding:12px; white-space:pre-wrap; line-height:1.7; margin:0}
+</style>
+</head>
+<body>
+<div class="wrap narrow">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../">All tools</a>
+      <a href="../workspace/">Workspace</a>
+      <a href="../roadmap/">Roadmap</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Something not working?</p>
+  <h1>Report a problem</h1>
+  <p class="lede">
+    Kagaz has no analytics, so <b>if something breaks I have no way of knowing</b> unless you
+    tell me. Pick whichever of these is least annoying — two of them need no account at all.
+  </p>
+
+  <section class="panel">
+    <div class="head"><span class="step">1</span><h2>What you were doing</h2></div>
+    <div class="body stack">
+      <div>
+        <label class="fld" for="what">In your own words — what happened, and what did you expect?</label>
+        <textarea id="what" placeholder="I dropped a scanned PDF into Compress and the page just sat there…"></textarea>
+      </div>
+      <div>
+        <label class="fld" for="tool">Which tool?</label>
+        <select id="tool">
+          <option value="">— pick one —</option>
+          <option>Merge PDF</option><option>Split PDF</option><option>Compress PDF</option>
+          <option>PDF to JPG</option><option>JPG to PDF</option><option>Organize PDF</option>
+          <option>Rotate PDF</option><option>Crop PDF</option><option>Page numbers</option>
+          <option>Watermark PDF</option><option>Sign PDF</option><option>Scan to PDF</option>
+          <option>Redact PDF</option><option>Workspace</option><option>Certificate Press</option>
+          <option>Something else / the site itself</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="head"><span class="step">2</span><h2>Your setup</h2><span class="note">read from this browser</span></div>
+    <div class="body stack">
+      <p class="ctx" id="ctx">reading…</p>
+      <p class="hint">
+        This is filled in from the browser you are using right now, so you do not have to look it
+        up. It is the single most useful thing in a bug report — most problems turn out to be
+        specific to one browser. Nothing here identifies you, and none of it is sent anywhere
+        until you choose one of the buttons below.
+      </p>
+      <button class="btn ghost" id="copy" type="button">Copy this</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="head"><span class="step">3</span><h2>Send it</h2></div>
+    <div class="body">
+      <div class="ways3">
+        <div class="way">
+          <span class="who">No account needed</span>
+          <h3>Email</h3>
+          <p>Opens your mail app with everything above already written out. The simplest option, and the one to use if you would rather not be public.</p>
+          <a class="btn primary" id="mail" href="#">Write the email</a>
+        </div>
+        <div class="way">
+          <span class="who">If you're on X</span>
+          <h3>Reply on X</h3>
+          <p>Opens a reply on the launch thread with the details filled in, so everything stays in one place. Good for quick things, and I see it fastest.</p>
+          <a class="btn ghost" id="tweet" href="#" rel="noopener">Reply on the thread</a>
+        </div>
+        <div class="way">
+          <span class="who">If you use GitHub</span>
+          <h3>Open an issue</h3>
+          <p>Opens a new issue with the title and body prefilled. Best for anything you want tracked to a fix.</p>
+          <a class="btn ghost" id="issue" href="#" rel="noopener">Open an issue</a>
+        </div>
+      </div>
+      <div id="msg"></div>
+    </div>
+  </section>
+
+  <section class="prose">
+    <h2>What makes a report actually useful</h2>
+    <p>
+      You do not need to write a good bug report — anything at all is better than silence. But if
+      you have thirty seconds spare, these are the things that turn "it didn't work" into a fix:
+    </p>
+    <ul>
+      <li><b>What you expected versus what happened.</b> "The download never started" tells me far more than "it's broken".</li>
+      <li><b>Roughly how big the file was, and how many pages.</b> Most failures are memory or size related.</li>
+      <li><b>Whether it happens every time</b> or just once.</li>
+      <li><b>A screenshot,</b> if there was an error message on screen.</li>
+    </ul>
+    <p>
+      <b>Please do not send me the document itself</b> — especially not the kind of document you'd
+      be using Kagaz for. If a file is needed to reproduce a problem, I will ask, and only ever
+      for something you have made up for the purpose.
+    </p>
+
+    <h2>Not a bug, but something's missing?</h2>
+    <p>
+      The <a href="../roadmap/">roadmap</a> lists what's being built and what will never exist here,
+      with the reason for each. If what you want isn't on either list, say so — the reason behind a
+      request is usually more useful than the request itself.
+    </p>
+
+    <h2>Nothing on this page phones home</h2>
+    <p>
+      This page reads your browser's own details and writes them into a link. It sends nothing by
+      itself, sets no cookies, and stores nothing. If you close the tab without pressing a button,
+      no trace of you exists anywhere — same as every other page here.
+    </p>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../contribute/">Contribute</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz;
+
+  // Change these two if the address or handle ever moves.
+  var EMAIL = 'amitjena@namastevis.in';
+  var HANDLE = 'namastevis';
+  // Replies on the launch thread are the lowest-friction route of all.
+  var THREAD = 'https://x.com/namastevis/status/2085075023354859942';
+
+  /** Everything here comes from the visitor's own browser, and stays there. */
+  function context() {
+    var n = navigator;
+    var lines = [
+      'Browser: ' + n.userAgent,
+      'Screen: ' + window.screen.width + '×' + window.screen.height +
+        ' (window ' + window.innerWidth + '×' + window.innerHeight + ')',
+      'Language: ' + (n.language || 'unknown'),
+      'Device memory: ' + (n.deviceMemory ? n.deviceMemory + ' GB' : 'not reported'),
+      'Touch: ' + (('ontouchstart' in window) ? 'yes' : 'no'),
+      'Came from: ' + (document.referrer || 'typed or bookmarked')
+    ];
+    return lines.join('\n');
+  }
+
+  var ctx = context();
+  K.$('#ctx').textContent = ctx;
+
+  function body() {
+    var what = K.$('#what').value.trim() || '(what happened)';
+    var tool = K.$('#tool').value || '(which tool)';
+    return 'Tool: ' + tool + '\n\nWhat happened:\n' + what + '\n\n---\n' + ctx;
+  }
+
+  function title() {
+    var tool = K.$('#tool').value || 'Kagaz';
+    var what = K.$('#what').value.trim().split('\n')[0].slice(0, 60);
+    return tool + (what ? ' — ' + what : ' — problem report');
+  }
+
+  function refresh() {
+    K.$('#mail').href = 'mailto:' + EMAIL +
+      '?subject=' + encodeURIComponent('Kagaz: ' + title()) +
+      '&body=' + encodeURIComponent(body());
+
+    K.$('#issue').href = 'https://github.com/' + HANDLE + '/kagaz/issues/new' +
+      '?title=' + encodeURIComponent(title()) +
+      '&body=' + encodeURIComponent(body());
+
+    // A post has to be short, so send the gist and let the conversation happen there.
+    var short = '@' + HANDLE + ' Kagaz — ' + (K.$('#tool').value || 'a tool') + ': ' +
+      (K.$('#what').value.trim().slice(0, 150) || '(what happened)');
+    // in_reply_to keeps every report gathered under the launch thread
+    K.$('#tweet').href = 'https://twitter.com/intent/tweet?in_reply_to=' +
+      THREAD.split('/').pop() + '&text=' + encodeURIComponent(short);
+  }
+
+  K.$('#what').addEventListener('input', refresh);
+  K.$('#tool').addEventListener('change', refresh);
+
+  K.$('#copy').addEventListener('click', async function () {
+    try {
+      await navigator.clipboard.writeText(body());
+      K.say(K.$('#msg'), 'good', 'Copied. Paste it wherever suits you.');
+    } catch (e) {
+      K.say(K.$('#msg'), 'info', 'Your browser would not let me copy it — select the box above and copy manually.');
+    }
+  });
+
+  // A tool page can send you here with ?tool=Compress+PDF already set.
+  var preset = new URLSearchParams(location.search).get('tool');
+  if (preset) {
+    var sel = K.$('#tool');
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value.toLowerCase() === preset.toLowerCase()) { sel.selectedIndex = i; break; }
+    }
+  }
+
+  refresh();
+})();
+</script>
+</body>
+</html>

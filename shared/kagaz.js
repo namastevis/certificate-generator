@@ -127,7 +127,11 @@
 
   /* -------------------------------------------------------------- messages */
 
-  /** Replace the callout attached to a node (one message per slot). */
+  /**
+   * Replace the callout attached to a node (one message per slot).
+   * Errors get a reporting link appended — with no analytics, the moment
+   * something fails is the only chance of ever hearing about it.
+   */
   K.say = function (slot, kind, message, listItems) {
     if (!slot) return;
     slot.innerHTML = '';
@@ -139,6 +143,16 @@
       listItems.slice(0, 8).forEach(function (t) { ul.appendChild(K.el('li', { text: t })); });
       if (listItems.length > 8) ul.appendChild(K.el('li', { text: '…and ' + (listItems.length - 8) + ' more.' }));
       box.appendChild(ul);
+    }
+    if (kind === 'err') {
+      var tool = (document.title.split('—')[0] || '').trim();
+      box.appendChild(K.el('div', { style: 'margin-top:8px' }, [
+        K.el('a', {
+          href: K.ROOT + 'report/?tool=' + encodeURIComponent(tool),
+          text: 'Tell me about this →',
+          style: 'font-weight:700'
+        })
+      ]));
     }
     slot.appendChild(box);
   };

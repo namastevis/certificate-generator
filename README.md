@@ -160,5 +160,16 @@ Kagaz is free and will stay free. If it saved you an evening, you can
 
 MIT — see [LICENSE](LICENSE). Use it, fork it, remix it, ship it commercially.
 
-Built by [Amit Jena](https://namastevis.in) · [GitHub](https://github.com/namastevis) ·
-[LinkedIn](https://linkedin.com/in/namastevis)
+Built by [Amit Jena](https://namastevis.in) — an *Accidental Designer*.
+
+[Website](https://namastevis.in) ·
+[GitHub](https://github.com/namastevis) ·
+[LinkedIn](https://linkedin.com/in/namastevis) ·
+[X](https://x.com/namastevis) ·
+[Instagram](https://instagram.com/namastevis) ·
+[Google Scholar](https://scholar.google.com/citations?user=t98YXOQAAAAJ&hl=en) ·
+[amitjena@namastevis.in](mailto:amitjena@namastevis.in)
+
+Found a problem? The [report page](https://kagaz.namastevis.in/report/) fills in your browser
+details and offers email, a reply on X, or a prefilled GitHub issue — no account needed for the
+first two.
