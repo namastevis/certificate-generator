@@ -326,6 +326,17 @@ table.report th{color:var(--ink-soft); text-transform:uppercase; letter-spacing:
   border-radius:2px; padding:8px 10px;
 }
 .afterglow .links a:hover{border-color:var(--blue); background:var(--blue-wash); color:var(--blue-deep)}
+/* The next step is the point of this panel, so it outranks the credit line. */
+.afterglow .nexts a{
+  border-color:var(--blue); background:var(--blue-wash); color:var(--blue-deep);
+  font-weight:700; padding:10px 12px; min-height:var(--tap); display:inline-flex; align-items:center;
+}
+.afterglow .nexts a:hover{background:var(--blue); color:#fff; border-color:var(--blue)}
+.afterglow .made{
+  margin:16px 0 10px; padding-top:12px; border-top:1px solid var(--line);
+  font-size:13.5px; color:var(--ink-soft);
+}
+.afterglow .made b{color:var(--ink)}
 
 /* donation */
 .chai{
