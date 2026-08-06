@@ -299,6 +299,57 @@
     return canvas;
   };
 
+  /**
+   * Render every page to a small thumbnail. Organise, rotate, crop and redact
+   * all need this, so it lives here rather than being copied four times.
+   * Returns [{ index, url, width, height, rotation }]; call release() when done
+   * or the object URLs leak.
+   */
+  K.thumbnails = async function (bytes, opts) {
+    opts = opts || {};
+    var maxEdge = opts.maxEdge || 200;
+    var pdfjsLib = K.pdfjs();
+    var doc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+    var out = [];
+
+    try {
+      for (var i = 1; i <= doc.numPages; i++) {
+        if (opts.onProgress) opts.onProgress((i - 1) / doc.numPages);
+        var page = await doc.getPage(i);
+        var base = page.getViewport({ scale: 1 });
+        var scale = maxEdge / Math.max(base.width, base.height);
+        var vp = page.getViewport({ scale: scale });
+
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.floor(vp.width));
+        canvas.height = Math.max(1, Math.floor(vp.height));
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+        var blob = await new Promise(function (r) { canvas.toBlob(r, 'image/jpeg', 0.7); });
+        out.push({
+          index: i - 1,
+          url: URL.createObjectURL(blob),
+          width: canvas.width,
+          height: canvas.height,
+          rotation: base.rotation || 0
+        });
+        canvas.width = canvas.height = 0;
+        page.cleanup();
+        await K.tick();
+      }
+    } finally {
+      doc.destroy();
+    }
+
+    out.release = function () {
+      out.forEach(function (t) { URL.revokeObjectURL(t.url); });
+    };
+    return out;
+  };
+
   K.canvasToBytes = function (canvas, type, quality) {
     return new Promise(function (resolve) {
       canvas.toBlob(async function (blob) {

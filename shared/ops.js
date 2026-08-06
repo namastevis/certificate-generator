@@ -595,6 +595,404 @@
   }
 
   /* ------------------------------------------------------------------ *
+   * Page geometry — rotate, organise, crop
+   * ------------------------------------------------------------------ */
+
+  var StandardFonts = PDFLib.StandardFonts;
+  var degrees = PDFLib.degrees;
+  var rgb = PDFLib.rgb;
+
+  function norm360(angle) {
+    return ((Math.round(angle / 90) * 90) % 360 + 360) % 360;
+  }
+
+  /** #rrggbb -> pdf-lib colour. Falls back to black rather than throwing. */
+  function hexColor(hex) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return rgb(0, 0, 0);
+    var n = parseInt(m[1], 16);
+    return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+  }
+
+  /**
+   * Turn pages. `angle` is relative by default — 90 means "a quarter turn
+   * from wherever this page already is", which is what someone clicking a
+   * rotate button expects. Absolute mode sets the angle outright.
+   */
+  async function rotate(input, opts) {
+    opts = opts || {};
+    var doc = await load(input, opts.name);
+    var pages = doc.getPages();
+    var targets = opts.ranges ? parseRanges(opts.ranges, pages.length).indices : pages.map(function (p, i) { return i; });
+    var angle = norm360(opts.angle || 0);
+    var changed = 0;
+
+    for (var t = 0; t < targets.length; t++) {
+      var page = pages[targets[t]];
+      var current = 0;
+      try { current = norm360(page.getRotation().angle); } catch (e) { current = 0; }
+      page.setRotation(degrees(opts.absolute ? angle : norm360(current + angle)));
+      changed++;
+    }
+
+    stamp(doc);
+    return { bytes: await doc.save({ useObjectStreams: true }), changed: changed, pages: pages.length };
+  }
+
+  /**
+   * Rebuild a document from an explicit page order.
+   * `order` is an array of zero-based source indices — omit a page to delete
+   * it, repeat one to duplicate it. `rotations` maps source index to an extra
+   * turn, so reordering and rotating happen in a single pass.
+   */
+  async function organize(input, opts) {
+    opts = opts || {};
+    var src = await load(input, opts.name);
+    var count = src.getPageCount();
+    var order = (opts.order || []).filter(function (i) { return i >= 0 && i < count; });
+
+    if (!order.length) throw KagazError('nopages', 'That would delete every page. Keep at least one.');
+
+    var out = await PDFDocument.create();
+    var copied = await out.copyPages(src, order);
+    var rotations = opts.rotations || {};
+
+    for (var i = 0; i < copied.length; i++) {
+      var page = copied[i];
+      var extra = norm360(rotations[order[i]] || 0);
+      if (extra) {
+        var current = 0;
+        try { current = norm360(page.getRotation().angle); } catch (e) { current = 0; }
+        page.setRotation(degrees(norm360(current + extra)));
+      }
+      out.addPage(page);
+    }
+
+    stamp(out);
+    return {
+      bytes: await out.save({ useObjectStreams: true }),
+      pages: order.length,
+      removed: count - new Set(order).size
+    };
+  }
+
+  /**
+   * Trim the visible area of pages by setting the CropBox.
+   * Margins arrive as fractions of the page (0–0.45 each side), which keeps
+   * the interface honest across mixed page sizes. Nothing is deleted — the
+   * content is still in the file, just outside the visible box.
+   */
+  async function crop(input, opts) {
+    opts = opts || {};
+    var doc = await load(input, opts.name);
+    var pages = doc.getPages();
+    var targets = opts.ranges ? parseRanges(opts.ranges, pages.length).indices : pages.map(function (p, i) { return i; });
+    var m = opts.margins || {};
+    var left = Math.max(0, Math.min(0.45, m.left || 0));
+    var right = Math.max(0, Math.min(0.45, m.right || 0));
+    var top = Math.max(0, Math.min(0.45, m.top || 0));
+    var bottom = Math.max(0, Math.min(0.45, m.bottom || 0));
+
+    if (!(left || right || top || bottom)) {
+      throw KagazError('nocrop', 'No margins were set, so there is nothing to crop.');
+    }
+
+    for (var t = 0; t < targets.length; t++) {
+      var page = pages[targets[t]];
+      var size = page.getSize();
+      var x = size.width * left;
+      var y = size.height * bottom;
+      var w = size.width * (1 - left - right);
+      var h = size.height * (1 - top - bottom);
+      if (w < 1 || h < 1) throw KagazError('nocrop', 'Those margins leave nothing visible.');
+      page.setCropBox(x, y, w, h);
+    }
+
+    stamp(doc);
+    return { bytes: await doc.save({ useObjectStreams: true }), changed: targets.length };
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Stamping — page numbers, watermarks, signatures
+   * ------------------------------------------------------------------ */
+
+  var POSITIONS = ['top-left', 'top-centre', 'top-right', 'bottom-left', 'bottom-centre', 'bottom-right'];
+
+  /** Work out an x/y for a box of the given size in one of six slots. */
+  function placeBox(pageW, pageH, boxW, boxH, position, margin) {
+    var x, y;
+    if (/left/.test(position)) x = margin;
+    else if (/right/.test(position)) x = pageW - margin - boxW;
+    else x = (pageW - boxW) / 2;
+
+    if (/^top/.test(position)) y = pageH - margin - boxH;
+    else y = margin;
+
+    return { x: x, y: y };
+  }
+
+  /**
+   * Draw a page number on every selected page.
+   * `format` may contain {n} for the number and {total} for the count.
+   */
+  async function pageNumbers(input, opts) {
+    opts = opts || {};
+    var doc = await load(input, opts.name);
+    var pages = doc.getPages();
+    var font = await doc.embedFont(opts.font || StandardFonts.Helvetica);
+    var size = Math.max(5, Math.min(72, opts.size || 11));
+    var margin = Math.max(0, opts.margin == null ? 28 : opts.margin);
+    var position = POSITIONS.indexOf(opts.position) === -1 ? 'bottom-centre' : opts.position;
+    var format = opts.format || '{n}';
+    var color = hexColor(opts.color || '#14171D');
+    var start = parseInt(opts.start, 10);
+    if (isNaN(start)) start = 1;
+
+    var targets = opts.ranges ? parseRanges(opts.ranges, pages.length).indices : pages.map(function (p, i) { return i; });
+    if (!targets.length) throw KagazError('nopages', 'That page selection is empty.');
+
+    var total = targets.length;
+    for (var t = 0; t < targets.length; t++) {
+      var page = pages[targets[t]];
+      var label = format.replace('{n}', String(start + t)).replace('{total}', String(start + total - 1));
+      var textW = font.widthOfTextAtSize(label, size);
+      var textH = font.heightAtSize(size);
+      var s = page.getSize();
+      var at = placeBox(s.width, s.height, textW, textH, position, margin);
+      page.drawText(label, { x: at.x, y: at.y, size: size, font: font, color: color });
+    }
+
+    stamp(doc);
+    return { bytes: await doc.save({ useObjectStreams: true }), numbered: targets.length };
+  }
+
+  /**
+   * Stamp text or an image across pages.
+   * Used by both the watermark tool (usually tiled, semi-transparent) and the
+   * signature tool (one placement, opaque) — same operation, different settings.
+   */
+  async function stampPages(input, opts) {
+    opts = opts || {};
+    var doc = await load(input, opts.name);
+    var pages = doc.getPages();
+    var targets = opts.ranges ? parseRanges(opts.ranges, pages.length).indices : pages.map(function (p, i) { return i; });
+    if (!targets.length) throw KagazError('nopages', 'That page selection is empty.');
+
+    var opacity = Math.max(0.02, Math.min(1, opts.opacity == null ? 0.25 : opts.opacity));
+    var angle = opts.angle || 0;
+    var position = POSITIONS.indexOf(opts.position) === -1 ? 'centre' : opts.position;
+    var margin = opts.margin == null ? 36 : opts.margin;
+
+    var font = null, image = null;
+    if (opts.image) {
+      var isPng = opts.imageType === 'png' ||
+        (opts.image[0] === 0x89 && opts.image[1] === 0x50);
+      try {
+        image = isPng ? await doc.embedPng(opts.image) : await doc.embedJpg(opts.image);
+      } catch (err) {
+        throw KagazError('badimage', 'That image could not be embedded — it may be corrupt or in an unsupported format.');
+      }
+    } else {
+      if (!opts.text) throw KagazError('nothing', 'Give me some text or an image to stamp.');
+      font = await doc.embedFont(opts.font || StandardFonts.HelveticaBold);
+    }
+
+    for (var t = 0; t < targets.length; t++) {
+      var page = pages[targets[t]];
+      var s = page.getSize();
+
+      if (image) {
+        // Width is a fraction of the page so one setting suits every page size.
+        var w = s.width * Math.max(0.02, Math.min(1, opts.scale || 0.3));
+        var h = w * (image.height / image.width);
+        var spot = position === 'centre'
+          ? { x: (s.width - w) / 2, y: (s.height - h) / 2 }
+          : placeBox(s.width, s.height, w, h, position, margin);
+        page.drawImage(image, { x: spot.x, y: spot.y, width: w, height: h, opacity: opacity, rotate: degrees(angle) });
+      } else {
+        var size = Math.max(6, opts.size || 48);
+        var color = hexColor(opts.color || '#14171D');
+        var textW = font.widthOfTextAtSize(opts.text, size);
+        var textH = font.heightAtSize(size);
+
+        if (opts.tile) {
+          // Repeat across the page. Generous spacing keeps it legible under text.
+          var stepX = Math.max(80, textW * 1.6);
+          var stepY = Math.max(60, textH * 5);
+          for (var gy = -s.height; gy < s.height * 2; gy += stepY) {
+            for (var gx = -s.width; gx < s.width * 2; gx += stepX) {
+              page.drawText(opts.text, {
+                x: gx, y: gy, size: size, font: font, color: color,
+                opacity: opacity, rotate: degrees(angle)
+              });
+            }
+          }
+        } else {
+          var at = position === 'centre'
+            ? { x: (s.width - textW) / 2, y: (s.height - textH) / 2 }
+            : placeBox(s.width, s.height, textW, textH, position, margin);
+          page.drawText(opts.text, {
+            x: at.x, y: at.y, size: size, font: font, color: color,
+            opacity: opacity, rotate: degrees(angle)
+          });
+        }
+      }
+    }
+
+    stamp(doc);
+    return { bytes: await doc.save({ useObjectStreams: true }), stamped: targets.length };
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Images in
+   * ------------------------------------------------------------------ */
+
+  var PAGE_SIZES = {
+    a4: [595.28, 841.89],
+    a3: [841.89, 1190.55],
+    a5: [419.53, 595.28],
+    letter: [612, 792],
+    legal: [612, 1008]
+  };
+
+  /**
+   * Build a PDF from images. `items` is [{ name, bytes, type:'png'|'jpg' }].
+   * pageSize 'fit' makes each page exactly the size of its image, which is
+   * what you want for scans; a named size letterboxes the image instead.
+   */
+  async function imagesToPdf(items, opts) {
+    opts = opts || {};
+    var onProgress = opts.onProgress || function () {};
+    if (!items || !items.length) throw KagazError('nofiles', 'Add at least one image first.');
+
+    var doc = await PDFDocument.create();
+    var margin = Math.max(0, opts.margin || 0);
+    var skipped = [];
+
+    for (var i = 0; i < items.length; i++) {
+      onProgress(i / items.length, items[i].name);
+      var item = items[i];
+      var bytes = asBytes(item.bytes);
+      var png = item.type === 'png' || (bytes && bytes[0] === 0x89 && bytes[1] === 0x50);
+      var img;
+
+      try {
+        img = png ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+      } catch (err) {
+        // One bad image should not lose the other forty.
+        skipped.push({ name: item.name, reason: 'not a readable JPG or PNG' });
+        continue;
+      }
+
+      var pageW, pageH;
+      if (opts.pageSize === 'fit' || !opts.pageSize) {
+        pageW = img.width + margin * 2;
+        pageH = img.height + margin * 2;
+      } else {
+        var base = PAGE_SIZES[opts.pageSize] || PAGE_SIZES.a4;
+        var landscape = opts.orientation === 'landscape' ||
+          (opts.orientation === 'auto' && img.width > img.height);
+        pageW = landscape ? base[1] : base[0];
+        pageH = landscape ? base[0] : base[1];
+      }
+
+      var page = doc.addPage([pageW, pageH]);
+      var availW = Math.max(1, pageW - margin * 2);
+      var availH = Math.max(1, pageH - margin * 2);
+      var scale = Math.min(availW / img.width, availH / img.height);
+      var w = img.width * scale, h = img.height * scale;
+
+      page.drawImage(img, { x: (pageW - w) / 2, y: (pageH - h) / 2, width: w, height: h });
+    }
+
+    if (!doc.getPageCount()) {
+      throw KagazError('noimages', 'None of those files could be read as a JPG or PNG.');
+    }
+
+    stamp(doc);
+    onProgress(1, null);
+    return {
+      bytes: await doc.save({ useObjectStreams: true }),
+      pages: doc.getPageCount(),
+      skipped: skipped
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Redaction
+   * ------------------------------------------------------------------ */
+
+  /**
+   * Remove content permanently.
+   *
+   * Drawing a black rectangle over text does not remove the text — it stays
+   * in the file and can be copied straight back out. That mistake has cost
+   * people real money, so this deliberately takes the destructive route: any
+   * page carrying a redaction is rendered to an image, the marked areas are
+   * painted out on that image, and the original page object is thrown away.
+   *
+   * The cost is that redacted pages stop being selectable text. That is the
+   * correct trade, and the interface must say so.
+   *
+   * `areas` is [{ page, x, y, w, h }] with coordinates as 0–1 fractions of the
+   * page, measured from the top-left, matching how the browser drew them.
+   * `renderer(pageIndex, { widthPt, heightPt, areas })` returns
+   * { data: Uint8Array(jpeg) } with the boxes already painted.
+   */
+  async function redact(input, opts, renderer) {
+    opts = opts || {};
+    var onProgress = opts.onProgress || function () {};
+    var src = await load(input, opts.name);
+    var pages = src.getPages();
+    var areas = opts.areas || [];
+
+    if (!areas.length) throw KagazError('noareas', 'Mark at least one area to remove.');
+
+    var byPage = {};
+    for (var a = 0; a < areas.length; a++) {
+      var p = areas[a].page;
+      if (p < 0 || p >= pages.length) continue;
+      (byPage[p] = byPage[p] || []).push(areas[a]);
+    }
+    var touched = Object.keys(byPage).map(Number);
+    if (!touched.length) throw KagazError('noareas', 'None of those areas fall on a real page.');
+
+    var out = await PDFDocument.create();
+
+    for (var i = 0; i < pages.length; i++) {
+      onProgress(i / pages.length, 'page ' + (i + 1) + ' of ' + pages.length);
+
+      if (!byPage[i]) {
+        // Untouched pages are copied intact, so the rest of the document
+        // keeps its selectable text.
+        var copied = await out.copyPages(src, [i]);
+        out.addPage(copied[0]);
+        continue;
+      }
+
+      var size = pages[i].getSize();
+      var rotation = 0;
+      try { rotation = norm360(pages[i].getRotation().angle); } catch (e) { rotation = 0; }
+      var wPt = (rotation === 90 || rotation === 270) ? size.height : size.width;
+      var hPt = (rotation === 90 || rotation === 270) ? size.width : size.height;
+
+      var img = await renderer(i, { widthPt: wPt, heightPt: hPt, areas: byPage[i] });
+      var embedded = await out.embedJpg(img.data);
+      var page = out.addPage([wPt, hPt]);
+      page.drawImage(embedded, { x: 0, y: 0, width: wPt, height: hPt });
+    }
+
+    stamp(out);
+    onProgress(1, null);
+    return {
+      bytes: await out.save({ useObjectStreams: true }),
+      pages: pages.length,
+      flattened: touched.length,
+      areas: areas.length
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
    * Inspection — used by the tool pages to describe a file before acting
    * ------------------------------------------------------------------ */
 
@@ -625,6 +1023,15 @@
     splitPlan: splitPlan,
     compress: compress,
     rasterize: rasterize,
+    rotate: rotate,
+    organize: organize,
+    crop: crop,
+    pageNumbers: pageNumbers,
+    stampPages: stampPages,
+    imagesToPdf: imagesToPdf,
+    redact: redact,
+    POSITIONS: POSITIONS,
+    PAGE_SIZES: PAGE_SIZES,
     // exported for tests
     _internals: { isImageStream: isImageStream, componentCount: componentCount, filterNames: filterNames, baseName: baseName }
   };

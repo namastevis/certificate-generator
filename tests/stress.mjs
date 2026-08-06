@@ -548,6 +548,157 @@ await succeeds('describe() reports a sane summary', async () => {
   return info.pages + ' pages, ' + info.images + ' images, ' + Object.keys(info.sizes).length + ' distinct size';
 });
 
+/* ------------------------------------------------------- geometry and stamps */
+
+group('Rotate, organise, crop');
+
+await succeeds('rotate every page by 90', async () => {
+  const out = await ops.rotate(good10, { angle: 90 });
+  const doc = await ops.load(out.bytes);
+  const angles = doc.getPages().map(p => p.getRotation().angle);
+  if (!angles.every(a => a === 90)) return 'got ' + [...new Set(angles)].join(',');
+  return '10 pages at 90 degrees';
+});
+
+await succeeds('rotation is relative, not absolute', async () => {
+  const once = await ops.rotate(good3, { angle: 90 });
+  const twice = await ops.rotate(once.bytes, { angle: 90 });
+  const doc = await ops.load(twice.bytes);
+  const a = doc.getPage(0).getRotation().angle;
+  if (a !== 180) return '90 + 90 gave ' + a + ' degrees';
+  return '90 + 90 = 180';
+});
+
+await succeeds('rotating a range leaves the rest alone', async () => {
+  const out = await ops.rotate(good10, { angle: 270, absolute: true, ranges: '1-2' });
+  const doc = await ops.load(out.bytes);
+  if (doc.getPage(0).getRotation().angle !== 270) return 'page 1 was not turned';
+  if (doc.getPage(5).getRotation().angle !== 0) return 'the rotation leaked past the range';
+  return 'pages 1-2 only';
+});
+
+await succeeds('organise reorders, deletes and duplicates', async () => {
+  const reversed = await ops.organize(good10, { order: [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] });
+  if (reversed.pages !== 10) return 'reverse changed the count';
+  const fewer = await ops.organize(good10, { order: [0, 2, 4] });
+  if (fewer.pages !== 3) return 'delete gave ' + fewer.pages + ' pages';
+  const dup = await ops.organize(good3, { order: [0, 0, 0, 0] });
+  if (dup.pages !== 4) return 'duplicate gave ' + dup.pages + ' pages';
+  return 'reverse / 10→3 / 1→4';
+});
+
+await succeeds('organise applies per-page rotation', async () => {
+  const out = await ops.organize(good3, { order: [1], rotations: { 1: 90 } });
+  const doc = await ops.load(out.bytes);
+  if (doc.getPage(0).getRotation().angle !== 90) return 'rotation was not applied';
+  return 'single page kept and turned';
+});
+
+await refuses('organise refuses to delete every page', () => ops.organize(good3, { order: [] }), 'nopages');
+await refuses('organise ignores out-of-range indices', () => ops.organize(good3, { order: [50, 60] }), 'nopages');
+
+await succeeds('crop sets a smaller CropBox', async () => {
+  const out = await ops.crop(good3, { margins: { left: 0.1, right: 0.1, top: 0.05, bottom: 0.05 } });
+  const doc = await ops.load(out.bytes);
+  const box = doc.getPage(0).getCropBox();
+  if (Math.abs(box.width - 595.28 * 0.8) > 1) return 'width came out ' + box.width.toFixed(1);
+  if (Math.abs(box.height - 841.89 * 0.9) > 1) return 'height came out ' + box.height.toFixed(1);
+  return Math.round(box.width) + '×' + Math.round(box.height) + ' pt';
+});
+
+await refuses('crop refuses zero margins', () => ops.crop(good3, { margins: {} }), 'nocrop');
+
+await succeeds('crop clamps absurd margins instead of producing nothing', async () => {
+  const out = await ops.crop(good3, { margins: { left: 9, right: 9, top: 9, bottom: 9 } });
+  const doc = await ops.load(out.bytes);
+  const box = doc.getPage(0).getCropBox();
+  if (box.width < 1 || box.height < 1) return 'produced an empty page';
+  return 'clamped to ' + Math.round(box.width) + '×' + Math.round(box.height) + ' pt';
+});
+
+group('Page numbers and stamps');
+
+await succeeds('numbers every page', async () => {
+  const out = await ops.pageNumbers(good10, { format: '{n} of {total}' });
+  if (out.numbered !== 10) return 'numbered ' + out.numbered;
+  const info = await inspect(out.bytes);
+  if (info.pages !== 10) return 'page count changed';
+  return '10 numbered, "1 of 10"';
+});
+
+await succeeds('numbers a range with a custom start', async () => {
+  const out = await ops.pageNumbers(good10, { ranges: '3-', start: 1, position: 'top-right' });
+  if (out.numbered !== 8) return 'numbered ' + out.numbered;
+  return 'pages 3-10 numbered from 1';
+});
+
+await refuses('numbering an empty selection', () => ops.pageNumbers(good3, { ranges: '80-90' }), 'nopages');
+
+await succeeds('tiled text watermark', async () => {
+  const out = await ops.stampPages(good3, { text: 'CONFIDENTIAL', tile: true, opacity: 0.2, angle: 45, size: 36 });
+  if (out.stamped !== 3) return 'stamped ' + out.stamped;
+  return '3 pages, ' + Math.round(out.bytes.length / 1024) + ' KB';
+});
+
+await succeeds('single positioned stamp', async () => {
+  const out = await ops.stampPages(good3, { text: 'DRAFT', tile: false, position: 'bottom-right', opacity: 0.5 });
+  if (out.stamped !== 3) return 'stamped ' + out.stamped;
+  return 'bottom right on 3 pages';
+});
+
+await refuses('stamping nothing', () => ops.stampPages(good3, {}), 'nothing');
+await refuses('stamping a corrupt image', () => ops.stampPages(good3, { image: new Uint8Array([1, 2, 3, 4]) }), 'badimage');
+
+await succeeds('signature on the last page only', async () => {
+  // A 1x1 PNG is enough to prove the placement path works.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const out = await ops.stampPages(good10, { image: new Uint8Array(png), imageType: 'png', ranges: 'last', opacity: 1, scale: 0.25 });
+  if (out.stamped !== 1) return 'stamped ' + out.stamped + ' pages';
+  return 'one page signed';
+});
+
+group('Images in');
+
+await refuses('no images at all', () => ops.imagesToPdf([]), 'nofiles');
+await refuses('nothing readable as an image', () => ops.imagesToPdf([{ name: 'x.jpg', bytes: new Uint8Array([1, 2, 3]) }]), 'noimages');
+
+await succeeds('one unreadable image does not lose the rest', async () => {
+  const png = new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+  const out = await ops.imagesToPdf([
+    { name: 'good.png', bytes: png, type: 'png' },
+    { name: 'junk.png', bytes: new Uint8Array([1, 2, 3]), type: 'png' },
+    { name: 'good2.png', bytes: png, type: 'png' }
+  ], { pageSize: 'a4' });
+  if (out.pages !== 2) return 'expected 2 pages, got ' + out.pages;
+  if (out.skipped.length !== 1) return 'expected 1 skip, got ' + out.skipped.length;
+  return '2 pages kept, 1 skipped: ' + out.skipped[0].reason;
+});
+
+group('Redaction');
+
+await refuses('redacting with no areas', () => ops.redact(good3, { areas: [] }, async () => {}), 'noareas');
+await refuses('redacting a page that does not exist', () => ops.redact(good3, { areas: [{ page: 99, x: 0, y: 0, w: 1, h: 1 }] }, async () => {}), 'noareas');
+
+await succeeds('only marked pages are flattened', async () => {
+  const rendered = [];
+  // A tiny valid JPEG stands in for a rendered page.
+  const jpeg = new Uint8Array(Buffer.from(
+    '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABsSFBcUERsXFhceHBsgKEIrKCUlKFE6PTBCYFVlZF9VXVtqeJmBanGQc1td' +
+    'hbWGkJ6jq62rZ4C8ybqmx5moq6T/2wBDARweHigjKE4rK06kbl1upKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSk' +
+    'pKSkpKSkpKSkpKSkpKSkpKSkpKT/wAARCAACAAIDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAAAP/EABQQAQAA' +
+    'AAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMR' +
+    'AD8AAA//2Q==', 'base64'));
+
+  const out = await ops.redact(good10, {
+    areas: [{ page: 1, x: 0.1, y: 0.1, w: 0.3, h: 0.05 }, { page: 4, x: 0.2, y: 0.4, w: 0.4, h: 0.1 }]
+  }, async (i) => { rendered.push(i); return { data: jpeg }; });
+
+  if (out.flattened !== 2) return 'flattened ' + out.flattened + ' pages';
+  if (rendered.join() !== '1,4') return 'rendered the wrong pages: ' + rendered.join();
+  if (out.pages !== 10) return 'page count became ' + out.pages;
+  return '2 of 10 pages flattened, 8 kept intact';
+});
+
 /* --------------------------------------------------------------------- report */
 
 console.log('\n' + '─'.repeat(64));

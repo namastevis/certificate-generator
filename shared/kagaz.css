@@ -229,6 +229,56 @@ table.report th{color:var(--ink-soft); text-transform:uppercase; letter-spacing:
 .thumb img{display:block; width:100%; height:auto; border:1px solid var(--line)}
 .thumb span{font-family:var(--mono); font-size:10px; color:var(--ink-soft); display:block; margin-top:5px}
 
+/* ------------------------------------------------------- page thumbnails */
+
+.pagegrid{
+  display:grid; gap:12px; margin-top:14px;
+  grid-template-columns:repeat(auto-fill,minmax(112px,1fr));
+}
+@media (min-width:700px){ .pagegrid{grid-template-columns:repeat(auto-fill,minmax(136px,1fr))} }
+
+.pagecard{
+  border:1px solid var(--line); background:#fff; border-radius:2px; padding:7px;
+  display:flex; flex-direction:column; gap:6px; position:relative;
+}
+.pagecard.gone{opacity:.35; border-style:dashed; background:#f6f6f3}
+.pagecard.sel{border-color:var(--blue); box-shadow:0 0 0 1px var(--blue)}
+.pagecard .shot{
+  position:relative; background:#f6f6f3; border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center; overflow:hidden; min-height:78px;
+}
+.pagecard .shot img{display:block; max-width:100%; height:auto; transition:transform .18s}
+.pagecard .no{
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--ink-soft);
+  text-align:center; text-transform:uppercase;
+}
+.pagecard .acts{display:flex; gap:3px; justify-content:center; flex-wrap:wrap}
+.pagecard .acts .iconbtn{width:32px; height:32px; min-width:32px; font-size:12px}
+.pagecard .badge{
+  position:absolute; top:4px; left:4px; z-index:2; font-family:var(--mono); font-size:9px;
+  background:var(--ink); color:#fff; border-radius:2px; padding:2px 5px; letter-spacing:.08em;
+}
+.pagecard.gone .badge{background:var(--reg)}
+
+/* redaction canvas */
+.marker{position:relative; display:inline-block; max-width:100%; touch-action:none; cursor:crosshair}
+.marker canvas{display:block; max-width:100%; height:auto; border:1px solid var(--line-strong)}
+.markbox{position:absolute; background:rgba(20,23,29,.82); outline:1px solid var(--reg); cursor:pointer}
+.markbox:hover{outline-width:2px}
+
+/* camera */
+.cam{background:#14171D; border-radius:2px; overflow:hidden; position:relative; min-height:200px}
+.cam video{display:block; width:100%; height:auto}
+.cam .camctl{
+  display:flex; gap:8px; justify-content:center; padding:12px; background:var(--card);
+  border-top:1px solid var(--line); flex-wrap:wrap;
+}
+.shutter{
+  width:56px; height:56px; border-radius:50%; border:3px solid var(--ink);
+  background:var(--reg); cursor:pointer; padding:0;
+}
+.shutter:disabled{opacity:.4; cursor:default}
+
 /* --------------------------------------------------------------- long copy */
 
 .prose{max-width:68ch; margin-top:44px}

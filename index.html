@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kagaz — PDF tools that never upload your files</title>
-<meta name="description" content="Merge, split, compress and convert PDFs entirely inside your browser. Nothing is uploaded, because there is no server. Free, unlimited, open source, made in India.">
+<meta name="description" content="Merge, split, compress, convert, sign, scan and redact PDFs entirely in your browser. Nothing is uploaded, because there is no server. Free and open source.">
 <link rel="canonical" href="https://kagaz.namastevis.in/">
 <meta property="og:title" content="Kagaz — PDF tools that never upload your files">
-<meta property="og:description" content="Merge, split, compress and convert PDFs entirely in your browser. No uploads, no accounts, no daily limits.">
+<meta property="og:description" content="Thirteen PDF tools that run entirely in your browser. No uploads, no accounts, no daily limits.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://kagaz.namastevis.in/">
 <meta name="twitter:card" content="summary">
@@ -36,6 +36,7 @@
     </a>
     <nav>
       <a href="#tools">Tools</a>
+      <a href="roadmap/">Roadmap</a>
       <a href="contribute/">Contribute</a>
       <a href="https://github.com/namastevis/kagaz">Source</a>
       <span class="sep" aria-hidden="true"></span>
@@ -46,8 +47,8 @@
   <p class="eyebrow">Free · unlimited · open source · made in India</p>
   <h1>Paper tools that never leave your browser.</h1>
   <p class="lede">
-    Merge, split, compress and convert PDFs on your own machine. Nothing you open here
-    is uploaded — not to my server, not to anyone else's. <b>There is no server.</b>
+    Merge, split, compress, convert, sign, scan and redact PDFs on your own machine. Nothing you
+    open here is uploaded — not to my server, not to anyone else's. <b>There is no server.</b>
   </p>
 
   <div class="proofstrip">
@@ -57,45 +58,95 @@
     sitting in <code>/vendor</code> — no analytics, no trackers, no accounts, no upload endpoint to hit.
   </div>
 
-  <h2 class="eyebrow" id="tools">The tools</h2>
+  <h2 class="eyebrow" id="tools">Organise</h2>
   <div class="tools">
-
     <a class="tool" href="merge-pdf/">
       <span class="kicker">Combine</span>
       <h3>Merge PDF <span class="arrow">→</span></h3>
-      <p>Join any number of PDFs into one. Page sizes, orientation and rotation are preserved exactly — nothing is squashed onto A4.</p>
+      <p>Join any number of PDFs into one. Page sizes, orientation and rotation preserved exactly.</p>
     </a>
-
     <a class="tool" href="split-pdf/">
       <span class="kicker">Divide</span>
       <h3>Split PDF <span class="arrow">→</span></h3>
-      <p>Pull out a page range, break a file every N pages, or explode it into one file per page. Useful for splitting a scanned batch of invoices.</p>
+      <p>Pull out a range, break every N pages, or explode one file into many. Good for scanned invoice batches.</p>
     </a>
+    <a class="tool" href="organize-pdf/">
+      <span class="kicker">Arrange</span>
+      <h3>Organize PDF <span class="arrow">→</span></h3>
+      <p>See every page, then reorder, remove, duplicate or turn them on a visual grid.</p>
+    </a>
+    <a class="tool" href="rotate-pdf/">
+      <span class="kicker">Turn</span>
+      <h3>Rotate PDF <span class="arrow">→</span></h3>
+      <p>Fix sideways pages and save it into the file, so it stays fixed for everyone who opens it.</p>
+    </a>
+    <a class="tool" href="crop-pdf/">
+      <span class="kicker">Trim</span>
+      <h3>Crop PDF <span class="arrow">→</span></h3>
+      <p>Cut wide margins so text fills an e-reader screen, with a live preview.</p>
+    </a>
+  </div>
 
+  <h2 class="eyebrow">Convert and shrink</h2>
+  <div class="tools">
     <a class="tool" href="compress-pdf/">
       <span class="kicker">Shrink</span>
       <h3>Compress PDF <span class="arrow">→</span></h3>
-      <p>Downsamples the images inside your PDF and leaves the text as text. Most tools quietly flatten the whole page into a picture. This one tells you what it did.</p>
+      <p>Downsamples the images inside and leaves the text as text. Tells you exactly what it changed and what it refused to touch.</p>
     </a>
-
     <a class="tool" href="pdf-to-jpg/">
       <span class="kicker">Convert</span>
       <h3>PDF to JPG <span class="arrow">→</span></h3>
-      <p>Turn pages into images at whatever resolution you actually need — 72 dpi for a screen, 300 dpi for print. You pick, not the tool.</p>
+      <p>Pages as images at whatever resolution you actually need — 72 dpi for a screen, 300 for print.</p>
     </a>
+    <a class="tool" href="jpg-to-pdf/">
+      <span class="kicker">Convert</span>
+      <h3>JPG to PDF <span class="arrow">→</span></h3>
+      <p>Photos and screenshots into one document. No watermark, no page limit.</p>
+    </a>
+    <a class="tool" href="scan-to-pdf/">
+      <span class="kicker">Capture</span>
+      <h3>Scan to PDF <span class="arrow">→</span></h3>
+      <p>Photograph paper with your phone camera. No app installed, and the photographs never leave the device.</p>
+    </a>
+  </div>
 
+  <h2 class="eyebrow">Mark and protect</h2>
+  <div class="tools">
+    <a class="tool" href="redact-pdf/">
+      <span class="kicker">Remove</span>
+      <h3>Redact PDF <span class="arrow">→</span></h3>
+      <p>Destroys what is underneath rather than covering it. A black rectangle is not redaction.</p>
+    </a>
+    <a class="tool" href="sign-pdf/">
+      <span class="kicker">Sign</span>
+      <h3>Sign PDF <span class="arrow">→</span></h3>
+      <p>Draw a signature and place it. Your signature is as sensitive as the document — neither one leaves your device.</p>
+    </a>
+    <a class="tool" href="watermark-pdf/">
+      <span class="kicker">Stamp</span>
+      <h3>Watermark PDF <span class="arrow">→</span></h3>
+      <p>Text or a logo across the pages, with opacity, angle and page range.</p>
+    </a>
+    <a class="tool" href="page-numbers/">
+      <span class="kicker">Number</span>
+      <h3>Add page numbers <span class="arrow">→</span></h3>
+      <p>Position, starting number and wording. Skip the cover page properly.</p>
+    </a>
+  </div>
+
+  <h2 class="eyebrow">Batch</h2>
+  <div class="tools">
     <a class="tool" href="certificate/">
-      <span class="kicker">Batch</span>
+      <span class="kicker">Many at once</span>
       <h3>Certificate Press <span class="arrow">→</span></h3>
-      <p>One design × many names. Paste a spreadsheet, drop your artwork, and get every personalised certificate, badge or ID card as one PDF or a ZIP.</p>
+      <p>One design × many names. Paste a spreadsheet, drop your artwork, get every personalised certificate, badge or ID card as one PDF or a ZIP.</p>
     </a>
-
-    <a class="tool soon" href="contribute/">
-      <span class="kicker">Not built yet</span>
-      <h3>JPG to PDF · Rotate · Page numbers · Watermark</h3>
-      <p>Each of these is one self-contained file and an afternoon's work. They are written up as good first issues if you fancy it.</p>
+    <a class="tool soon" href="roadmap/">
+      <span class="kicker">Roadmap</span>
+      <h3>What's coming — and what never will</h3>
+      <p>Edit, OCR, form filling and more are being built. Office conversions and AI never will be, and the page explains exactly why.</p>
     </a>
-
   </div>
 
   <section class="prose">
@@ -118,11 +169,15 @@
     <h2>What Kagaz will not do</h2>
     <p>
       Being honest about the edges is the whole point, so: <b>there is no PDF to Word
-      conversion here, and there probably never will be.</b> Doing that properly means
-      reconstructing a layout from a page description, and it cannot be done well inside
-      a browser. Every free tool that offers it is sending your document to a server.
-      If you need it, that trade-off might be worth it to you — but you should know you
-      are making it.
+      conversion here, and there never will be.</b> Doing it properly means reconstructing a
+      layout from a page description, and it cannot be done well inside a browser. Every free
+      tool that offers it is sending your document to a server. If you need it, that trade-off
+      might be worth it to you — but you should know you are making it.
+    </p>
+    <p>
+      The same goes for office documents in the other direction, for turning a web page into a
+      PDF, and for anything involving AI. The <a href="roadmap/">roadmap</a> lists every one of
+      them with the reason.
     </p>
     <p>
       Kagaz also will not remove a password you do not have, and will not claim that a

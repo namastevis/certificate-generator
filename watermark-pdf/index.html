@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watermark a PDF without uploading — Kagaz</title>
+<meta name="description" content="Stamp text or a logo across PDF pages in your browser. Control opacity, angle, size and which pages. Nothing is uploaded. Free and open source.">
+<link rel="canonical" href="https://kagaz.namastevis.in/watermark-pdf/">
+<meta property="og:title" content="Watermark a PDF without uploading — Kagaz">
+<meta property="og:description" content="Stamp text or a logo across pages, entirely in your browser.">
+<meta property="og:url" content="https://kagaz.namastevis.in/watermark-pdf/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Is my PDF uploaded to add a watermark?","acceptedAnswer":{"@type":"Answer","text":"No. The watermark is drawn onto the pages inside your browser. Kagaz has no server."}},
+{"@type":"Question","name":"Does a watermark protect my document?","acceptedAnswer":{"@type":"Answer","text":"Only socially. A watermark tells an honest reader that a copy is a draft or is confidential. It is drawn on top of the page and anyone determined can remove it, so it is not a security measure."}},
+{"@type":"Question","name":"Can I use my company logo?","acceptedAnswer":{"@type":"Answer","text":"Yes. Upload a PNG or JPG. A PNG with a transparent background sits best over text."}}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../">All tools</a>
+      <a href="../roadmap/">Roadmap</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Watermark · nothing uploaded</p>
+  <h1>Watermark PDF</h1>
+  <p class="lede">
+    Stamp <b>DRAFT</b>, <b>CONFIDENTIAL</b> or your own logo across the pages. Control how
+    faint it is, which way it leans, and which pages get it. Runs entirely in this tab.
+  </p>
+
+  <section class="panel" id="panelFile">
+    <div class="head"><span class="step">1</span><h2>Your PDF</h2><span class="note" id="fileNote">no file yet</span></div>
+    <div class="body">
+      <div class="drop" id="drop">
+        <span class="big">Drop a PDF here</span>
+        <span class="small">or tap to choose · one file at a time</span>
+      </div>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelOpts" hidden>
+    <div class="head"><span class="step">2</span><h2>The mark</h2><span class="note" id="planNote"></span></div>
+    <div class="body stack">
+      <div>
+        <span class="fldlabel">Type</span>
+        <div class="seg" id="kinds" role="group" aria-label="Watermark type">
+          <button type="button" data-kind="text" aria-pressed="true">text</button>
+          <button type="button" data-kind="image" aria-pressed="false">image or logo</button>
+        </div>
+      </div>
+
+      <div id="textOpts">
+        <label class="fld" for="text">Text</label>
+        <input type="text" id="text" value="CONFIDENTIAL" spellcheck="false" maxlength="60">
+        <div class="row" style="margin-top:12px">
+          <div>
+            <label class="fld" for="size">Size — <span id="sVal">48</span> pt</label>
+            <input type="range" id="size" min="10" max="140" value="48" step="2">
+          </div>
+          <div>
+            <label class="fld" for="color">Colour</label>
+            <input type="color" id="color" value="#d23b36">
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <span class="fldlabel">Layout</span>
+          <div class="seg" id="layouts" role="group" aria-label="Layout">
+            <button type="button" data-tile="1" aria-pressed="true">repeat across the page</button>
+            <button type="button" data-tile="0" aria-pressed="false">once, in the centre</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="imageOpts" hidden>
+        <div class="drop" id="imgDrop" style="min-height:96px; padding:16px">
+          <span class="big" id="imgLabel">Drop a PNG or JPG logo</span>
+          <span class="small">a PNG with a transparent background sits best over text</span>
+        </div>
+        <div style="margin-top:12px">
+          <label class="fld" for="scale">Width — <span id="scVal">30</span>% of the page</label>
+          <input type="range" id="scale" min="5" max="100" value="30" step="5">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label class="fld" for="opacity">Opacity — <span id="oVal">25</span>%</label>
+          <input type="range" id="opacity" min="2" max="100" value="25" step="1">
+        </div>
+        <div>
+          <label class="fld" for="angle">Angle — <span id="aVal">45</span>°</label>
+          <input type="range" id="angle" min="0" max="90" value="45" step="5">
+        </div>
+        <div>
+          <label class="fld" for="ranges">Pages</label>
+          <input type="text" id="ranges" value="all" spellcheck="false" placeholder="all, or 1-3">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">Add a PDF</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Stamp and download</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p>
+      Stamped on your own machine — nothing was uploaded. Kagaz is free and open source,
+      made by <b>Amit Jena</b> in India.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+      <a href="../">More Kagaz tools</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>What a watermark is actually for</h2>
+    <p>
+      It is a social signal, not a lock. A watermark tells an honest reader that the copy in
+      front of them is a draft, an unpaid proof, or not for circulation. It does not stop anyone
+      determined — the mark is drawn on top of the page and can be removed by someone who wants
+      to badly enough.
+    </p>
+    <p>
+      If you need to actually stop information getting out, remove it with
+      <a href="../redact-pdf/">Redact PDF</a> rather than covering it up.
+    </p>
+
+    <h2>Getting it readable but not shouty</h2>
+    <ul>
+      <li><b>Opacity 15–30%</b> is the sweet spot. Below 10% it vanishes on print; above 40% it fights the text.</li>
+      <li><b>45°</b> is conventional for a repeated mark because it crosses lines of text rather than running along them.</li>
+      <li><b>Repeating</b> suits DRAFT or CONFIDENTIAL. A logo usually looks better once, in the centre.</li>
+    </ul>
+
+    <h2>Common questions</h2>
+    <h3>Is my file uploaded?</h3>
+    <p>No. Both your PDF and your logo stay on your device. There is no server.</p>
+    <h3>Can I put it behind the text instead of over it?</h3>
+    <p>Not yet — the mark is drawn on top. Drawing underneath the existing content is a <a href="../contribute/">good first issue</a>.</p>
+    <h3>Can I remove a watermark from a PDF?</h3>
+    <p>
+      Not with this tool, and be wary of anything that promises it. Once stamped, the mark is
+      ordinary page content and removing it means editing the document.
+    </p>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../sign-pdf/">Sign PDF</a> — place a signature instead</li>
+      <li><a href="../page-numbers/">Add page numbers</a></li>
+      <li><a href="../redact-pdf/">Redact PDF</a> — actually remove content</li>
+      <li><a href="../compress-pdf/">Compress PDF</a> — shrink the result</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../roadmap/">Roadmap</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+  var current = null, kind = 'text', tile = true, logo = null;
+
+  var noteEl = K.$('#fileNote'), planNote = K.$('#planNote'), countEl = K.$('#count');
+  var goBtn = K.$('#go'), clearBtn = K.$('#clear'), progEl = K.$('#prog');
+  var msgEl = K.$('#msg'), fileMsgEl = K.$('#fileMsg'), optsPanel = K.$('#panelOpts');
+
+  K.dropzone(K.$('#drop'), { accept: '.pdf,application/pdf', match: K.isPdf, onFiles: function (f) { open(f[0]); } });
+
+  K.dropzone(K.$('#imgDrop'), {
+    accept: 'image/png,image/jpeg,.png,.jpg,.jpeg',
+    match: function (f) { return /\.(png|jpe?g)$/i.test(f.name) || /^image\/(png|jpeg)$/.test(f.type); },
+    onFiles: async function (files) {
+      var f = files[0];
+      logo = { name: f.name, type: /\.png$/i.test(f.name) || f.type === 'image/png' ? 'png' : 'jpg', bytes: await K.read(f) };
+      K.$('#imgLabel').textContent = f.name + ' · ' + K.bytes(f.size);
+      render();
+    }
+  });
+
+  async function open(file) {
+    K.say(fileMsgEl, 'info', 'Reading “' + file.name + '”…');
+    try {
+      var bytes = await K.read(file);
+      var info = await ops.describe(bytes, file.name);
+      current = { name: file.name, bytes: bytes, pages: info.pages };
+      K.say(fileMsgEl, 'warn', K.sizeWarning(file.size));
+    } catch (err) {
+      current = null;
+      K.say(fileMsgEl, 'err', K.humanError(err));
+    }
+    render();
+  }
+
+  K.$$('#kinds button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      kind = b.getAttribute('data-kind');
+      K.$$('#kinds button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      K.$('#textOpts').hidden = kind !== 'text';
+      K.$('#imageOpts').hidden = kind !== 'image';
+      render();
+    });
+  });
+
+  K.$$('#layouts button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      tile = b.getAttribute('data-tile') === '1';
+      K.$$('#layouts button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      render();
+    });
+  });
+
+  [['#size', '#sVal'], ['#opacity', '#oVal'], ['#angle', '#aVal'], ['#scale', '#scVal']].forEach(function (pair) {
+    K.$(pair[0]).addEventListener('input', function () { K.$(pair[1]).textContent = this.value; render(); });
+  });
+  K.$('#text').addEventListener('input', render);
+  K.$('#ranges').addEventListener('input', render);
+
+  function selection() {
+    if (!current) return [];
+    return ops.parseRanges(K.$('#ranges').value, current.pages).indices;
+  }
+
+  function render() {
+    if (!current) {
+      noteEl.textContent = 'no file yet';
+      countEl.textContent = 'Add a PDF';
+      optsPanel.hidden = true;
+      clearBtn.disabled = goBtn.disabled = true;
+      return;
+    }
+    var sel = selection();
+    var ready = kind === 'text' ? !!K.$('#text').value.trim() : !!logo;
+
+    noteEl.textContent = current.pages + ' pages · ' + K.bytes(current.bytes.length);
+    planNote.textContent = sel.length + ' pages · ' + K.$('#opacity').value + '% opacity';
+    countEl.innerHTML = '<b>' + sel.length + '</b> page' + (sel.length === 1 ? '' : 's') + ' · ' +
+      (kind === 'text' ? (tile ? 'repeated text' : 'centred text') : (logo ? 'logo' : 'no image yet'));
+    optsPanel.hidden = false;
+    clearBtn.disabled = false;
+    goBtn.disabled = !sel.length || !ready;
+
+    K.$('#panelFile').classList.add('done');
+    if (!sel.length) K.say(msgEl, 'warn', 'That page selection is empty.');
+    else if (!ready) K.say(msgEl, 'warn', kind === 'text' ? 'Type some text to stamp.' : 'Add a PNG or JPG to stamp.');
+    else K.say(msgEl, '', null);
+  }
+
+  clearBtn.addEventListener('click', function () {
+    current = null; logo = null;
+    K.$('#imgLabel').textContent = 'Drop a PNG or JPG logo';
+    K.say(msgEl, '', null); K.say(fileMsgEl, '', null);
+    render();
+  });
+
+  goBtn.addEventListener('click', async function () {
+    if (!current) return;
+    goBtn.disabled = true; clearBtn.disabled = true;
+    var bar = K.progress(progEl);
+    K.say(msgEl, 'info', 'Stamping…');
+    try {
+      bar.set(0.4);
+      var ranges = K.$('#ranges').value;
+      var opts = {
+        opacity: parseInt(K.$('#opacity').value, 10) / 100,
+        angle: parseInt(K.$('#angle').value, 10),
+        ranges: /^all$/i.test(ranges.trim()) ? null : ranges,
+        name: current.name
+      };
+      if (kind === 'text') {
+        opts.text = K.$('#text').value.trim();
+        opts.size = parseInt(K.$('#size').value, 10);
+        opts.color = K.$('#color').value;
+        opts.tile = tile;
+        opts.position = 'centre';
+      } else {
+        opts.image = logo.bytes;
+        opts.imageType = logo.type;
+        opts.scale = parseInt(K.$('#scale').value, 10) / 100;
+        opts.position = 'centre';
+      }
+
+      var out = await ops.stampPages(current.bytes, opts);
+      bar.set(1);
+      K.say(msgEl, 'good', out.stamped + ' page' + (out.stamped === 1 ? '' : 's') + ' stamped — ' + K.bytes(out.bytes.length) + '.');
+      K.download(out.bytes, current.name.replace(/\.pdf$/i, '') + '_watermarked.pdf');
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

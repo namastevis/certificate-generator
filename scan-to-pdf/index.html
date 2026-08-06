@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scan to PDF with your phone camera — Kagaz</title>
+<meta name="description" content="Use your phone camera to turn paper into a PDF, entirely in the browser. The photos are never uploaded and no app is installed. Free and open source.">
+<link rel="canonical" href="https://kagaz.namastevis.in/scan-to-pdf/">
+<meta property="og:title" content="Scan to PDF with your phone camera — Kagaz">
+<meta property="og:description" content="Photograph paper, get a PDF. No app, no upload.">
+<meta property="og:url" content="https://kagaz.namastevis.in/scan-to-pdf/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Are the photos uploaded anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The camera feed and every photo stay inside the browser tab. Kagaz has no server, and nothing is saved to your camera roll either unless you download it."}},
+{"@type":"Question","name":"Do I need to install an app?","acceptedAnswer":{"@type":"Answer","text":"No. This runs in your phone's browser using the standard camera API. Nothing is installed."}},
+{"@type":"Question","name":"Why does the camera not start?","acceptedAnswer":{"@type":"Answer","text":"Browsers only allow camera access over a secure connection and after you grant permission. Make sure the address starts with https and that you allowed the camera when asked."}}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../">All tools</a>
+      <a href="../roadmap/">Roadmap</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Scan · nothing uploaded</p>
+  <h1>Scan to PDF</h1>
+  <p class="lede">
+    Photograph paper with your phone and get a PDF. No app to install, no account, and
+    <b>the photographs never leave your phone</b> — which is the entire point when the paper is
+    a bank statement.
+  </p>
+
+  <section class="panel" id="panelCam">
+    <div class="head"><span class="step">1</span><h2>Capture</h2><span class="note" id="camNote">camera off</span></div>
+    <div class="body">
+      <div class="cam" id="camWrap" hidden>
+        <video id="video" playsinline muted></video>
+        <div class="camctl">
+          <button class="btn ghost" id="stopCam" type="button">Stop camera</button>
+          <button class="shutter" id="shoot" title="Take a photo" aria-label="Take a photo"></button>
+          <button class="btn ghost" id="flip" type="button">Flip camera</button>
+        </div>
+      </div>
+
+      <div id="startWrap">
+        <button class="btn primary" id="startCam" type="button" style="width:100%">Start camera</button>
+        <p class="hint">
+          Your browser will ask permission first. On a laptop this works too, but a phone held
+          over the page gives far better results.
+        </p>
+        <div class="drop" id="drop" style="margin-top:14px; min-height:90px; padding:16px">
+          <span class="big">Or add photos you already took</span>
+          <span class="small">JPG or PNG · from your camera roll or files</span>
+        </div>
+      </div>
+      <div id="camMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelPages" hidden>
+    <div class="head"><span class="step">2</span><h2>Pages</h2><span class="note" id="pageNote"></span></div>
+    <div class="body">
+      <p class="hint">← → reorder · × removes. Retake anything blurry before building the PDF.</p>
+      <div class="pagegrid" id="grid"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelOpts" hidden>
+    <div class="head"><span class="step">3</span><h2>Output</h2></div>
+    <div class="body stack">
+      <div>
+        <span class="fldlabel">Page size</span>
+        <div class="seg" id="sizes" role="group" aria-label="Page size">
+          <button type="button" data-size="fit" aria-pressed="false">match the photo</button>
+          <button type="button" data-size="a4" aria-pressed="true">A4</button>
+          <button type="button" data-size="letter" aria-pressed="false">Letter</button>
+        </div>
+      </div>
+      <div>
+        <label class="fld" for="outName">File name</label>
+        <input type="text" id="outName" value="scan.pdf" spellcheck="false">
+      </div>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">No pages yet</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Make PDF</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p>
+      Scanned entirely on your own device — the photographs were never uploaded. Kagaz is free
+      and open source, made by <b>Amit Jena</b> in India.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+      <a href="../">More Kagaz tools</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>Why this one matters</h2>
+    <p>
+      Scanner apps are the most invasive software on most people's phones. They ask for the
+      camera, the photo library and the network, and the documents people put through them are
+      exactly the ones that should not travel: bank statements, ID cards, medical letters,
+      property papers.
+    </p>
+    <p>
+      This does the same job with a web page. The camera feed is handled by your browser, the
+      photographs stay in the tab, and the PDF is assembled on your device. Close the tab and
+      every trace is gone.
+    </p>
+
+    <h2>Getting a readable scan</h2>
+    <ul>
+      <li>Flat surface, and light coming from the side rather than over your shoulder — that is what casts the shadow.</li>
+      <li>Fill the frame with the page. Cropping later throws away detail you could have captured.</li>
+      <li>Hold the phone parallel to the paper. A tilted photo makes text at the far edge blurry.</li>
+      <li>Check each thumbnail before building. Retaking now is quicker than discovering it later.</li>
+    </ul>
+
+    <h2>Common questions</h2>
+    <h3>Are the photos uploaded?</h3>
+    <p>No. There is no server behind this page. Nothing is written to your camera roll either, unless you download the finished PDF.</p>
+    <h3>The camera will not start.</h3>
+    <p>
+      Browsers only allow camera access on a secure (<code>https</code>) connection and only after
+      you grant permission. If you dismissed the prompt, reload and allow it. On iPhone, Safari
+      handles this more reliably than other browsers.
+    </p>
+    <h3>Is there automatic edge detection and perspective correction?</h3>
+    <p>
+      Not yet — this is the honest gap against a dedicated scanner app. It is on the
+      <a href="../roadmap/">roadmap</a> and is a genuinely interesting thing to build if you fancy it.
+    </p>
+    <h3>The PDF is huge.</h3>
+    <p>Phone cameras produce enormous photos. Run the result through <a href="../compress-pdf/">Compress PDF</a>.</p>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../jpg-to-pdf/">JPG to PDF</a> — same thing from existing images</li>
+      <li><a href="../compress-pdf/">Compress PDF</a> — shrink the scan</li>
+      <li><a href="../organize-pdf/">Organize PDF</a> — reorder or drop a page</li>
+      <li><a href="../merge-pdf/">Merge PDF</a> — attach it to another document</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../roadmap/">Roadmap</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+  var shots = [], stream = null, facing = 'environment', pageSize = 'a4';
+
+  var video = K.$('#video'), grid = K.$('#grid'), countEl = K.$('#count');
+  var goBtn = K.$('#go'), clearBtn = K.$('#clear'), progEl = K.$('#prog');
+  var msgEl = K.$('#msg'), camMsg = K.$('#camMsg'), camNote = K.$('#camNote');
+
+  K.dropzone(K.$('#drop'), {
+    accept: 'image/png,image/jpeg,.png,.jpg,.jpeg',
+    multiple: true,
+    match: function (f) { return /\.(png|jpe?g)$/i.test(f.name) || /^image\/(png|jpeg)$/.test(f.type); },
+    onFiles: async function (files) {
+      for (var i = 0; i < files.length; i++) {
+        var bytes = await K.read(files[i]);
+        var type = /\.png$/i.test(files[i].name) || files[i].type === 'image/png' ? 'png' : 'jpg';
+        shots.push({
+          name: files[i].name, type: type, bytes: bytes,
+          url: URL.createObjectURL(new Blob([bytes], { type: 'image/' + (type === 'png' ? 'png' : 'jpeg') })),
+          size: bytes.length
+        });
+        await K.tick();
+      }
+      render();
+    }
+  });
+
+  /* ------------------------------------------------------------- camera */
+
+  async function startCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return K.say(camMsg, 'err', 'This browser does not offer camera access. You can still add photos you have already taken.');
+    }
+    K.say(camMsg, 'info', 'Asking for camera permission…');
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 2560 }, height: { ideal: 1920 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      K.$('#camWrap').hidden = false;
+      K.$('#startWrap').hidden = true;
+      camNote.textContent = 'camera on';
+      K.say(camMsg, '', null);
+    } catch (err) {
+      var why = err && err.name === 'NotAllowedError'
+        ? 'Camera permission was refused. Allow it in your browser settings, or add photos you have already taken.'
+        : (location.protocol !== 'https:' && location.hostname !== 'localhost'
+          ? 'Browsers only allow the camera over a secure https connection.'
+          : 'The camera could not be started: ' + (err && err.message));
+      K.say(camMsg, 'err', why);
+    }
+  }
+
+  function stopCamera() {
+    if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+    stream = null;
+    video.srcObject = null;
+    K.$('#camWrap').hidden = true;
+    K.$('#startWrap').hidden = false;
+    camNote.textContent = 'camera off';
+  }
+
+  K.$('#startCam').addEventListener('click', startCamera);
+  K.$('#stopCam').addEventListener('click', stopCamera);
+  K.$('#flip').addEventListener('click', async function () {
+    facing = facing === 'environment' ? 'user' : 'environment';
+    stopCamera();
+    await startCamera();
+  });
+
+  K.$('#shoot').addEventListener('click', async function () {
+    if (!stream) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    var enc = await K.canvasToBytes(canvas, 'image/jpeg', 0.9);
+    canvas.width = canvas.height = 0;
+    if (!enc) return K.say(camMsg, 'err', 'That photo could not be captured.');
+
+    shots.push({
+      name: 'page-' + (shots.length + 1) + '.jpg', type: 'jpg', bytes: enc.bytes,
+      url: URL.createObjectURL(enc.blob), size: enc.bytes.length
+    });
+    render();
+  });
+
+  window.addEventListener('pagehide', stopCamera);
+
+  /* --------------------------------------------------------------- list */
+
+  function move(i, d) {
+    var j = i + d;
+    if (j < 0 || j >= shots.length) return;
+    var t = shots[i]; shots[i] = shots[j]; shots[j] = t;
+    render();
+  }
+
+  function render() {
+    grid.innerHTML = '';
+    var total = 0;
+
+    shots.forEach(function (shot, i) {
+      total += shot.size;
+      var card = K.el('div', { class: 'pagecard' });
+      card.appendChild(K.el('span', { class: 'badge', text: String(i + 1) }));
+      var box = K.el('div', { class: 'shot' });
+      box.appendChild(K.el('img', { src: shot.url, alt: 'Page ' + (i + 1), loading: 'lazy' }));
+      card.appendChild(box);
+      card.appendChild(K.el('div', { class: 'no', text: K.bytes(shot.size) }));
+
+      var acts = K.el('div', { class: 'acts' });
+      acts.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Move earlier', 'aria-label': 'Move page ' + (i + 1) + ' earlier',
+        disabled: i === 0 ? 'disabled' : null, onclick: function () { move(i, -1); }, text: '←'
+      }));
+      acts.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Move later', 'aria-label': 'Move page ' + (i + 1) + ' later',
+        disabled: i === shots.length - 1 ? 'disabled' : null, onclick: function () { move(i, 1); }, text: '→'
+      }));
+      acts.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Remove', 'aria-label': 'Remove page ' + (i + 1),
+        onclick: function () { URL.revokeObjectURL(shot.url); shots.splice(i, 1); render(); }, text: '×'
+      }));
+      card.appendChild(acts);
+      grid.appendChild(card);
+    });
+
+    K.$('#panelPages').hidden = !shots.length;
+    K.$('#panelOpts').hidden = !shots.length;
+    K.$('#pageNote').textContent = shots.length + ' page' + (shots.length === 1 ? '' : 's') + ' · ' + K.bytes(total);
+    countEl.innerHTML = shots.length ? '<b>' + shots.length + '</b> page' + (shots.length === 1 ? '' : 's') + ' · ' + K.bytes(total) : 'No pages yet';
+    goBtn.disabled = !shots.length;
+    clearBtn.disabled = !shots.length;
+
+    K.say(msgEl, 'warn', K.sizeWarning(total));
+  }
+
+  K.$$('#sizes button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      pageSize = b.getAttribute('data-size');
+      K.$$('#sizes button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+    });
+  });
+
+  clearBtn.addEventListener('click', function () {
+    shots.forEach(function (s) { URL.revokeObjectURL(s.url); });
+    shots = [];
+    K.say(msgEl, '', null);
+    render();
+  });
+
+  goBtn.addEventListener('click', async function () {
+    goBtn.disabled = true; clearBtn.disabled = true;
+    var bar = K.progress(progEl);
+    K.say(msgEl, 'info', 'Building the PDF…');
+    try {
+      var out = await ops.imagesToPdf(shots.map(function (s) {
+        return { name: s.name, type: s.type, bytes: s.bytes };
+      }), {
+        pageSize: pageSize,
+        orientation: 'auto',
+        margin: pageSize === 'fit' ? 0 : 18,
+        onProgress: function (f) { bar.set(f * 0.95); }
+      });
+      bar.set(1);
+
+      var name = (K.$('#outName').value || 'scan.pdf').replace(/[\\/:*?"<>|]+/g, '_');
+      if (!/\.pdf$/i.test(name)) name += '.pdf';
+      K.say(msgEl, 'good', out.pages + ' page' + (out.pages === 1 ? '' : 's') + ' — ' + K.bytes(out.bytes.length) + '. Large? Run it through Compress PDF.');
+      K.download(out.bytes, name);
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

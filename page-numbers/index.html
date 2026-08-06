@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add page numbers to a PDF without uploading — Kagaz</title>
+<meta name="description" content="Number the pages of a PDF in your browser. Choose position, starting number, size and format. Nothing is uploaded. Free and open source.">
+<link rel="canonical" href="https://kagaz.namastevis.in/page-numbers/">
+<meta property="og:title" content="Add page numbers to a PDF — Kagaz">
+<meta property="og:description" content="Number PDF pages in your browser. No upload, no account.">
+<meta property="og:url" content="https://kagaz.namastevis.in/page-numbers/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Is my PDF uploaded to add page numbers?","acceptedAnswer":{"@type":"Answer","text":"No. The numbers are drawn onto the pages inside your browser. Kagaz has no server."}},
+{"@type":"Question","name":"Can I start numbering from a page other than the first?","acceptedAnswer":{"@type":"Answer","text":"Yes. Set a page range so the cover is skipped, and set the starting number to whatever you need."}},
+{"@type":"Question","name":"Can I remove page numbers later?","acceptedAnswer":{"@type":"Answer","text":"No. The numbers become part of the page content, so keep your original file if you might need it."}}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../">All tools</a>
+      <a href="../roadmap/">Roadmap</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Number · nothing uploaded</p>
+  <h1>Add page numbers</h1>
+  <p class="lede">
+    Number the pages of a document that arrived without them. Pick the corner, the starting
+    number and the wording. <b>Runs entirely in this tab.</b>
+  </p>
+
+  <section class="panel" id="panelFile">
+    <div class="head"><span class="step">1</span><h2>Your PDF</h2><span class="note" id="fileNote">no file yet</span></div>
+    <div class="body">
+      <div class="drop" id="drop">
+        <span class="big">Drop a PDF here</span>
+        <span class="small">or tap to choose · one file at a time</span>
+      </div>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelOpts" hidden>
+    <div class="head"><span class="step">2</span><h2>How they should look</h2><span class="note" id="planNote"></span></div>
+    <div class="body stack">
+      <div>
+        <span class="fldlabel">Position</span>
+        <div class="seg" id="positions" role="group" aria-label="Position">
+          <button type="button" data-pos="top-left" aria-pressed="false">top left</button>
+          <button type="button" data-pos="top-centre" aria-pressed="false">top centre</button>
+          <button type="button" data-pos="top-right" aria-pressed="false">top right</button>
+        </div>
+        <div class="seg" id="positions2" role="group" aria-label="Position" style="margin-top:6px">
+          <button type="button" data-pos="bottom-left" aria-pressed="false">bottom left</button>
+          <button type="button" data-pos="bottom-centre" aria-pressed="true">bottom centre</button>
+          <button type="button" data-pos="bottom-right" aria-pressed="false">bottom right</button>
+        </div>
+      </div>
+
+      <div>
+        <span class="fldlabel">Wording</span>
+        <div class="seg" id="formats" role="group" aria-label="Format">
+          <button type="button" data-fmt="{n}" aria-pressed="true">1</button>
+          <button type="button" data-fmt="- {n} -" aria-pressed="false">- 1 -</button>
+          <button type="button" data-fmt="Page {n}" aria-pressed="false">Page 1</button>
+          <button type="button" data-fmt="{n} of {total}" aria-pressed="false">1 of 20</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label class="fld" for="start">Start at</label>
+          <input type="number" id="start" value="1" min="0" step="1">
+        </div>
+        <div>
+          <label class="fld" for="size">Text size — <span id="sVal">11</span> pt</label>
+          <input type="range" id="size" min="6" max="28" value="11" step="1">
+        </div>
+        <div>
+          <label class="fld" for="margin">Distance from edge — <span id="mVal">28</span> pt</label>
+          <input type="range" id="margin" min="8" max="72" value="28" step="2">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label class="fld" for="color">Colour</label>
+          <input type="color" id="color" value="#14171d">
+        </div>
+        <div>
+          <label class="fld" for="ranges">Pages to number</label>
+          <input type="text" id="ranges" value="all" spellcheck="false" placeholder="all, or 2- to skip a cover">
+        </div>
+      </div>
+      <p class="hint">To skip a cover page, set pages to <code>2-</code> and start at <code>1</code> — the cover stays clean and page two becomes number one.</p>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">Add a PDF</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Add numbers and download</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p>
+      Numbered on your own machine — nothing was uploaded. Kagaz is free and open source,
+      made by <b>Amit Jena</b> in India.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+      <a href="../">More Kagaz tools</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>Skipping a cover page</h2>
+    <p>
+      The usual want is a report where page one is a title page that should stay bare, and the
+      numbering starts on the page after it. Set <b>pages</b> to <code>2-</code> and <b>start at</b>
+      to <code>1</code>. The cover is left alone and the following page is numbered 1.
+    </p>
+    <p>
+      If instead you want the cover counted but not printed, set start at <code>2</code>.
+    </p>
+
+    <h2>A word on where they land</h2>
+    <p>
+      Numbers are placed relative to each page's own edges, so a document with mixed page sizes
+      still gets them in the right corner on every page. If a number lands on top of existing
+      content, increase the distance from the edge.
+    </p>
+
+    <h2>Common questions</h2>
+    <h3>Is my file uploaded?</h3>
+    <p>No. The numbers are drawn onto the pages in your browser. There is no server.</p>
+    <h3>Can I take them off again?</h3>
+    <p>
+      No. Once added they are part of the page, exactly like any other text. Keep your original
+      file if there is any chance you will want it back.
+    </p>
+    <h3>Can I use Roman numerals or a custom font?</h3>
+    <p>Not yet. Both are <a href="../contribute/">good first issues</a> if you would like to add them.</p>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../watermark-pdf/">Watermark PDF</a> — stamp text or a logo across pages</li>
+      <li><a href="../merge-pdf/">Merge PDF</a> — join files before numbering them</li>
+      <li><a href="../organize-pdf/">Organize PDF</a> — get the order right first</li>
+      <li><a href="../crop-pdf/">Crop PDF</a> — trim the margins</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../roadmap/">Roadmap</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+  var current = null, position = 'bottom-centre', format = '{n}';
+
+  var noteEl = K.$('#fileNote'), planNote = K.$('#planNote'), countEl = K.$('#count');
+  var goBtn = K.$('#go'), clearBtn = K.$('#clear'), progEl = K.$('#prog');
+  var msgEl = K.$('#msg'), fileMsgEl = K.$('#fileMsg'), optsPanel = K.$('#panelOpts');
+
+  K.dropzone(K.$('#drop'), { accept: '.pdf,application/pdf', match: K.isPdf, onFiles: function (f) { open(f[0]); } });
+
+  async function open(file) {
+    K.say(fileMsgEl, 'info', 'Reading “' + file.name + '”…');
+    try {
+      var bytes = await K.read(file);
+      var info = await ops.describe(bytes, file.name);
+      current = { name: file.name, bytes: bytes, pages: info.pages };
+      K.say(fileMsgEl, 'warn', K.sizeWarning(file.size));
+    } catch (err) {
+      current = null;
+      K.say(fileMsgEl, 'err', K.humanError(err));
+    }
+    render();
+  }
+
+  function pickGroup(sel, attr, set) {
+    K.$$(sel).forEach(function (b) {
+      b.addEventListener('click', function () {
+        set(b.getAttribute(attr));
+        K.$$('#positions button, #positions2 button').forEach(function (o) {
+          if (o.hasAttribute('data-pos')) o.setAttribute('aria-pressed', String(o.getAttribute('data-pos') === position));
+        });
+        K.$$('#formats button').forEach(function (o) {
+          o.setAttribute('aria-pressed', String(o.getAttribute('data-fmt') === format));
+        });
+        render();
+      });
+    });
+  }
+  pickGroup('#positions button, #positions2 button', 'data-pos', function (v) { position = v; });
+  pickGroup('#formats button', 'data-fmt', function (v) { format = v; });
+
+  K.$('#size').addEventListener('input', function () { K.$('#sVal').textContent = this.value; render(); });
+  K.$('#margin').addEventListener('input', function () { K.$('#mVal').textContent = this.value; });
+  K.$('#ranges').addEventListener('input', render);
+  K.$('#start').addEventListener('input', render);
+
+  function selection() {
+    if (!current) return [];
+    var v = K.$('#ranges').value;
+    return ops.parseRanges(v, current.pages).indices;
+  }
+
+  function render() {
+    if (!current) {
+      noteEl.textContent = 'no file yet';
+      countEl.textContent = 'Add a PDF';
+      optsPanel.hidden = true;
+      clearBtn.disabled = goBtn.disabled = true;
+      return;
+    }
+    var sel = selection();
+    var start = parseInt(K.$('#start').value, 10) || 1;
+    var sample = format.replace('{n}', String(start)).replace('{total}', String(start + sel.length - 1));
+
+    noteEl.textContent = current.pages + ' pages · ' + K.bytes(current.bytes.length);
+    planNote.textContent = sel.length + ' pages · first reads “' + sample + '”';
+    countEl.innerHTML = '<b>' + sel.length + '</b> page' + (sel.length === 1 ? '' : 's') + ' · “' + sample + '” · ' + position.replace('-', ' ');
+    optsPanel.hidden = false;
+    clearBtn.disabled = false;
+    goBtn.disabled = sel.length === 0;
+    K.$('#panelFile').classList.add('done');
+    K.say(msgEl, sel.length ? '' : 'warn', sel.length ? null : 'That page selection is empty.');
+  }
+
+  clearBtn.addEventListener('click', function () {
+    current = null;
+    K.say(msgEl, '', null); K.say(fileMsgEl, '', null);
+    render();
+  });
+
+  goBtn.addEventListener('click', async function () {
+    if (!current) return;
+    goBtn.disabled = true; clearBtn.disabled = true;
+    var bar = K.progress(progEl);
+    K.say(msgEl, 'info', 'Numbering…');
+    try {
+      bar.set(0.4);
+      var ranges = K.$('#ranges').value;
+      var out = await ops.pageNumbers(current.bytes, {
+        position: position,
+        format: format,
+        start: parseInt(K.$('#start').value, 10),
+        size: parseInt(K.$('#size').value, 10),
+        margin: parseInt(K.$('#margin').value, 10),
+        color: K.$('#color').value,
+        ranges: /^all$/i.test(ranges.trim()) ? null : ranges,
+        name: current.name
+      });
+      bar.set(1);
+      K.say(msgEl, 'good', out.numbered + ' pages numbered — ' + K.bytes(out.bytes.length) + '.');
+      K.download(out.bytes, current.name.replace(/\.pdf$/i, '') + '_numbered.pdf');
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

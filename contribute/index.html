@@ -18,12 +18,8 @@
   <header class="mast">
     <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
     <nav>
-      <a href="../merge-pdf/">Merge</a>
-      <a href="../split-pdf/">Split</a>
-      <a href="../compress-pdf/">Compress</a>
-      <a href="../pdf-to-jpg/">To JPG</a>
-      <a href="../certificate/">Certificate</a>
-      <span class="sep" aria-hidden="true"></span>
+      <a href="../">All tools</a>
+      <a href="../roadmap/">Roadmap</a>
       <a href="../contribute/" aria-current="page">Contribute</a>
       <a href="https://namastevis.in/">namastevis.in</a>
     </nav>
@@ -50,17 +46,19 @@ python3 -m http.server 8000
     </p>
 
     <h2>How the code is laid out</h2>
-    <pre><code>index.html            the landing page
-merge-pdf/index.html  one tool, one self-contained file
-split-pdf/index.html
-compress-pdf/index.html
-pdf-to-jpg/index.html
-certificate/index.html
-shared/kagaz.css      every page shares this stylesheet
-shared/kagaz.js       browser helpers: drop zones, downloads, canvas, messages
-shared/ops.js         the PDF logic — deliberately DOM-free
-vendor/               pdf-lib, pdf.js, JSZip, fontkit — vendored, never a CDN
-tests/stress.mjs      throws deliberately broken PDFs at shared/ops.js</code></pre>
+    <pre><code>index.html              the landing page
+roadmap/index.html      what exists, what is coming, what never will
+merge-pdf/index.html    one tool, one self-contained file
+split-pdf/  compress-pdf/  pdf-to-jpg/  jpg-to-pdf/
+organize-pdf/  rotate-pdf/  crop-pdf/  page-numbers/
+watermark-pdf/  sign-pdf/  scan-to-pdf/  redact-pdf/
+certificate/index.html  Certificate Press
+shared/kagaz.css        every page shares this stylesheet
+shared/kagaz.js         browser helpers: drop zones, downloads, canvas, thumbnails
+shared/ops.js           the PDF logic — deliberately DOM-free
+vendor/                 pdf-lib, pdf.js, JSZip, fontkit — vendored, never a CDN
+tests/stress.mjs        throws deliberately broken PDFs at shared/ops.js
+tests/verify.mjs        fails the build if any page loads an external asset</code></pre>
 
     <p>Three rules keep it that way, and they are the only ones:</p>
     <ol>
@@ -71,7 +69,7 @@ tests/stress.mjs      throws deliberately broken PDFs at shared/ops.js</code></p
 
     <h2>Adding a new tool</h2>
     <ol>
-      <li>Copy <code>merge-pdf/index.html</code> to <code>your-tool/index.html</code>. It is the simplest of the four.</li>
+      <li>Copy <code>merge-pdf/index.html</code> to <code>your-tool/index.html</code>. It is the simplest of them.</li>
       <li>Change the title, description, canonical URL and the copy below the fold. The slug should be what a person would actually type into a search box — <code>rotate-pdf</code>, not <code>rotator</code>.</li>
       <li>Put the actual PDF manipulation in <code>shared/ops.js</code> as a function that takes bytes and returns bytes.</li>
       <li>Add a card to the grid on the landing page and a link in every tool's footer list.</li>
@@ -79,33 +77,34 @@ tests/stress.mjs      throws deliberately broken PDFs at shared/ops.js</code></p
     </ol>
 
     <h2>Things worth building</h2>
-    <p>Roughly in order of how useful they would be, with the easiest first.</p>
-
-    <h3>Good first issues</h3>
+    <p>
+      The full list lives on the <a href="../roadmap/">roadmap</a>, which also records what will
+      never be built here and why. Everything in its “being built” section is unclaimed.
+    </p>
+    <p>Good places to start, roughly easiest first:</p>
     <ul>
-      <li><b>JPG to PDF</b> — the obvious missing counterpart to PDF to JPG. <code>pdf-lib</code>'s <code>embedJpg</code> does the hard part. Needs page-size options and ordering.</li>
-      <li><b>Rotate and reorder pages</b> — a thumbnail grid with rotate and drag. The PDF side is two lines; the interface is the work.</li>
-      <li><b>Add page numbers</b> — position, starting number, font size, skip-first-page.</li>
-      <li><b>Add a watermark</b> — text or image, opacity, angle, every page or a range.</li>
-      <li><b>Dark mode</b> — the palette is all CSS custom properties at the top of <code>shared/kagaz.css</code>, so this is mostly a <code>prefers-color-scheme</code> block.</li>
-      <li><b>Hindi, Odia, Tamil, Bengali interface strings</b> — the labels are plain text in the HTML. A translation is a genuinely valuable contribution and needs no JavaScript at all.</li>
+      <li><b>Indian language interfaces</b> — Hindi, Odia, Tamil, Bengali. The labels are plain text in the HTML, so this needs no JavaScript at all and is genuinely valuable.</li>
+      <li><b>Dark mode</b> — the palette is CSS custom properties at the top of <code>shared/kagaz.css</code>, so this is mostly one <code>prefers-color-scheme</code> block.</li>
+      <li><b>Drag to reorder</b> — the page grids use arrow buttons so they work on a phone. Adding drag as an enhancement on larger screens would be nice.</li>
+      <li><b>Fill PDF forms</b> — pdf-lib already exposes form fields; the work is the interface.</li>
+      <li><b>Automatic scan cropping</b> — edge detection and perspective correction for photographed pages.</li>
     </ul>
 
     <h3>Harder, and more interesting</h3>
     <ul>
-      <li><b>More image formats in the compressor.</b> It currently skips CMYK, JPEG 2000, JBIG2, CCITT fax and indexed-colour images rather than risk corrupting them. Each one you can decode safely is a real improvement to a real tool. Start with CCITT fax — it is what most document scanners produce.</li>
-      <li><b>Downsample soft masks.</b> Transparency masks are separate greyscale images and are often large. They can be re-deflated with <code>CompressionStream</code>, which browsers now have.</li>
-      <li><b>True redaction.</b> Draw a box, and actually remove the text and image data underneath rather than covering it. Most free tools draw a black rectangle over selectable text, which is a genuine safety bug people have been burned by.</li>
-      <li><b>Offline install.</b> A service worker to make Kagaz a proper installable PWA that survives having no network at all.</li>
-      <li><b>Use the content stream to size images.</b> The compressor currently caps images against the page size. Reading the actual transformation matrix would let it downsample far more precisely.</li>
+      <li><b>More image formats in the compressor.</b> It skips CMYK, JPEG 2000, JBIG2, CCITT fax and indexed-colour images rather than risk corrupting them. Start with CCITT fax — it is what most document scanners produce.</li>
+      <li><b>Downsample soft masks.</b> Transparency masks are separate greyscale images and are often large. <code>CompressionStream</code> makes re-deflating them possible.</li>
+      <li><b>Search and redact.</b> Find every occurrence of a name across a document rather than marking each by hand.</li>
+      <li><b>Encryption.</b> Password protecting a PDF means implementing the spec's crypto by hand. Possible, delicate, and the sort of thing that needs careful review.</li>
+      <li><b>Offline install.</b> A service worker to make Kagaz a proper installable PWA.</li>
     </ul>
 
     <h3>Please don't</h3>
     <ul>
       <li>Add a framework, a bundler, or a package manager step.</li>
       <li>Add analytics, error reporting, or anything that phones home. Yes, even the privacy-respecting kind.</li>
-      <li>Add PDF to Word. It cannot be done well in a browser, and shipping a bad version would undermine the one thing this site is for.</li>
-      <li>Add a feature that silently degrades a file. If a document cannot be processed safely, Kagaz says so.</li>
+      <li>Add anything from the roadmap's “never” list. Each one needs a server, and a server means uploading someone's document.</li>
+      <li>Add a feature that silently degrades a file. If it cannot be processed safely, say so.</li>
     </ul>
 
     <h2>Running the tests</h2>

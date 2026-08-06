@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JPG to PDF without uploading — Kagaz</title>
+<meta name="description" content="Turn JPG and PNG images into one PDF, entirely in your browser. Choose page size, orientation and margins. Nothing is uploaded. Free and open source.">
+<link rel="canonical" href="https://kagaz.namastevis.in/jpg-to-pdf/">
+<meta property="og:title" content="JPG to PDF without uploading — Kagaz">
+<meta property="og:description" content="Combine images into a PDF, entirely in your browser. No upload, no watermark.">
+<meta property="og:url" content="https://kagaz.namastevis.in/jpg-to-pdf/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Are my images uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. Kagaz has no server. The PDF is assembled in your browser from images that never leave your device."}},
+{"@type":"Question","name":"Does it add a watermark?","acceptedAnswer":{"@type":"Answer","text":"No. There is no watermark, no page limit and no account required."}},
+{"@type":"Question","name":"What page size should I choose?","acceptedAnswer":{"@type":"Answer","text":"Choose 'match each image' when the images are photos or scans and you want no white borders. Choose A4 or Letter when the PDF will be printed or attached to a form that expects a standard page."}}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../">All tools</a>
+      <a href="../roadmap/">Roadmap</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Convert · nothing uploaded</p>
+  <h1>JPG to PDF</h1>
+  <p class="lede">
+    Turn photos, scans and screenshots into a single PDF. Reorder them, pick a page size,
+    add margins. <b>No watermark, no page limit, and the images never leave your device.</b>
+  </p>
+
+  <section class="panel" id="panelFiles">
+    <div class="head"><span class="step">1</span><h2>Your images</h2><span class="note" id="fileNote">no images yet</span></div>
+    <div class="body">
+      <div class="drop" id="drop">
+        <span class="big">Drop JPG or PNG images here</span>
+        <span class="small">or tap to choose · add as many as you like · they appear in the order below</span>
+      </div>
+      <div class="pagegrid" id="grid"></div>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelOpts" hidden>
+    <div class="head"><span class="step">2</span><h2>Page setup</h2><span class="note" id="setupNote"></span></div>
+    <div class="body stack">
+      <div>
+        <span class="fldlabel">Page size</span>
+        <div class="seg" id="sizes" role="group" aria-label="Page size">
+          <button type="button" data-size="fit" aria-pressed="true">match each image</button>
+          <button type="button" data-size="a4" aria-pressed="false">A4</button>
+          <button type="button" data-size="letter" aria-pressed="false">Letter</button>
+          <button type="button" data-size="a5" aria-pressed="false">A5</button>
+        </div>
+        <p class="hint">“Match each image” gives a borderless page exactly the shape of the picture — right for scans and photos.</p>
+      </div>
+
+      <div id="orientWrap" hidden>
+        <span class="fldlabel">Orientation</span>
+        <div class="seg" id="orients" role="group" aria-label="Orientation">
+          <button type="button" data-orient="auto" aria-pressed="true">auto</button>
+          <button type="button" data-orient="portrait" aria-pressed="false">portrait</button>
+          <button type="button" data-orient="landscape" aria-pressed="false">landscape</button>
+        </div>
+      </div>
+
+      <div>
+        <label class="fld" for="margin">Margin — <span id="mVal">0</span> pt</label>
+        <input type="range" id="margin" min="0" max="72" value="0" step="4">
+      </div>
+
+      <div>
+        <label class="fld" for="outName">Output file name</label>
+        <input type="text" id="outName" value="images.pdf" spellcheck="false">
+      </div>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">Add some images</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Make PDF</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p>
+      Built on your own machine — the images were never uploaded. Kagaz is free and open
+      source, made by <b>Amit Jena</b> in India.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+      <a href="../">More Kagaz tools</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>Choosing a page size</h2>
+    <p>
+      <b>Match each image</b> makes every page exactly the shape of its picture. No white
+      borders, no letterboxing, nothing cropped. This is what you want for photographed
+      documents, scans and screenshots.
+    </p>
+    <p>
+      <b>A4, Letter or A5</b> puts each image onto a standard page, scaled to fit and centred.
+      Use these when the PDF is going to a printer or into a form that expects a normal page
+      size. Anything that does not match the page shape leaves white space at the sides — that
+      is what a margin setting is for.
+    </p>
+
+    <h2>Order matters</h2>
+    <p>
+      Images are added in the order your browser hands them over, which is not always the order
+      you picked them. Use the arrows under each thumbnail to move pages around before building
+      the PDF, and check the numbers.
+    </p>
+
+    <h2>Common questions</h2>
+    <h3>Are my images uploaded?</h3>
+    <p>No. There is no server. Open your browser's Network tab and build a PDF — nothing goes out.</p>
+    <h3>Is there a watermark?</h3>
+    <p>None. No watermark, no page limit, no account, no daily quota.</p>
+    <h3>What about HEIC photos from an iPhone?</h3>
+    <p>
+      Not supported — browsers cannot decode HEIC reliably. On an iPhone, Settings → Camera →
+      Formats → <b>Most Compatible</b> makes new photos JPG. Existing ones convert when you
+      share or email them.
+    </p>
+    <h3>Will it reduce quality?</h3>
+    <p>
+      No. Your JPGs are embedded exactly as they are, byte for byte. PNGs are embedded losslessly
+      too. If the result is large, run it through <a href="../compress-pdf/">Compress PDF</a>.
+    </p>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../pdf-to-jpg/">PDF to JPG</a> — the other direction</li>
+      <li><a href="../scan-to-pdf/">Scan to PDF</a> — use your phone camera instead</li>
+      <li><a href="../compress-pdf/">Compress PDF</a> — shrink the result</li>
+      <li><a href="../merge-pdf/">Merge PDF</a> — join it to another document</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../roadmap/">Roadmap</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+  var items = [], pageSize = 'fit', orientation = 'auto';
+
+  var grid = K.$('#grid'), noteEl = K.$('#fileNote'), countEl = K.$('#count');
+  var goBtn = K.$('#go'), clearBtn = K.$('#clear'), progEl = K.$('#prog');
+  var msgEl = K.$('#msg'), fileMsgEl = K.$('#fileMsg'), optsPanel = K.$('#panelOpts');
+
+  K.dropzone(K.$('#drop'), {
+    accept: 'image/jpeg,image/png,.jpg,.jpeg,.png',
+    multiple: true,
+    match: function (f) { return /\.(jpe?g|png)$/i.test(f.name) || /^image\/(jpeg|png)$/.test(f.type); },
+    onFiles: add
+  });
+
+  async function add(files) {
+    K.say(fileMsgEl, 'info', 'Reading ' + files.length + ' image' + (files.length > 1 ? 's' : '') + '…');
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      items.push({
+        name: f.name,
+        size: f.size,
+        file: f,
+        type: /\.png$/i.test(f.name) || f.type === 'image/png' ? 'png' : 'jpg',
+        url: URL.createObjectURL(f)
+      });
+      await K.tick();
+    }
+    K.say(fileMsgEl, 'warn', K.sizeWarning(items.reduce(function (s, it) { return s + it.size; }, 0)));
+    render();
+  }
+
+  function move(i, delta) {
+    var j = i + delta;
+    if (j < 0 || j >= items.length) return;
+    var t = items[i]; items[i] = items[j]; items[j] = t;
+    render();
+  }
+
+  function render() {
+    grid.innerHTML = '';
+    var total = 0;
+
+    items.forEach(function (item, i) {
+      total += item.size;
+      var card = K.el('div', { class: 'pagecard' });
+      card.appendChild(K.el('span', { class: 'badge', text: String(i + 1) }));
+
+      var shot = K.el('div', { class: 'shot' });
+      shot.appendChild(K.el('img', { src: item.url, alt: item.name, loading: 'lazy' }));
+      card.appendChild(shot);
+      card.appendChild(K.el('div', { class: 'no', text: K.bytes(item.size) }));
+
+      var acts = K.el('div', { class: 'acts' });
+      acts.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Move earlier', 'aria-label': 'Move ' + item.name + ' earlier',
+        disabled: i === 0 ? 'disabled' : null, onclick: function () { move(i, -1); }, text: '←'
+      }));
+      acts.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Move later', 'aria-label': 'Move ' + item.name + ' later',
+        disabled: i === items.length - 1 ? 'disabled' : null, onclick: function () { move(i, 1); }, text: '→'
+      }));
+      acts.appendChild(K.el('button', {
+        class: 'iconbtn', title: 'Remove', 'aria-label': 'Remove ' + item.name,
+        onclick: function () { URL.revokeObjectURL(item.url); items.splice(i, 1); render(); }, text: '×'
+      }));
+      card.appendChild(acts);
+      grid.appendChild(card);
+    });
+
+    noteEl.textContent = items.length ? items.length + ' image' + (items.length > 1 ? 's' : '') + ' · ' + K.bytes(total) : 'no images yet';
+    countEl.innerHTML = items.length
+      ? '<b>' + items.length + '</b> page' + (items.length > 1 ? 's' : '') + ' · ' + K.bytes(total)
+      : 'Add some images';
+    goBtn.disabled = !items.length;
+    clearBtn.disabled = !items.length;
+    optsPanel.hidden = !items.length;
+    K.$('#panelFiles').classList.toggle('done', items.length > 0);
+    K.$('#setupNote').textContent = pageSize === 'fit' ? 'borderless' : pageSize.toUpperCase() + ' · ' + orientation;
+  }
+
+  K.$$('#sizes button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      pageSize = b.getAttribute('data-size');
+      K.$$('#sizes button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      K.$('#orientWrap').hidden = pageSize === 'fit';
+      render();
+    });
+  });
+
+  K.$$('#orients button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      orientation = b.getAttribute('data-orient');
+      K.$$('#orients button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      render();
+    });
+  });
+
+  K.$('#margin').addEventListener('input', function () { K.$('#mVal').textContent = this.value; });
+
+  clearBtn.addEventListener('click', function () {
+    items.forEach(function (it) { URL.revokeObjectURL(it.url); });
+    items = [];
+    K.say(msgEl, '', null); K.say(fileMsgEl, '', null);
+    render();
+  });
+
+  goBtn.addEventListener('click', async function () {
+    goBtn.disabled = true; clearBtn.disabled = true;
+    var bar = K.progress(progEl);
+    K.say(msgEl, 'info', 'Reading images…');
+
+    try {
+      var payload = [];
+      for (var i = 0; i < items.length; i++) {
+        bar.set((i / items.length) * 0.5);
+        payload.push({ name: items[i].name, type: items[i].type, bytes: await K.read(items[i].file) });
+        await K.tick();
+      }
+
+      K.say(msgEl, 'info', 'Building the PDF…');
+      var out = await ops.imagesToPdf(payload, {
+        pageSize: pageSize,
+        orientation: orientation,
+        margin: parseInt(K.$('#margin').value, 10),
+        onProgress: function (f) { bar.set(0.5 + f * 0.45); }
+      });
+
+      bar.set(1);
+      var name = (K.$('#outName').value || 'images.pdf').replace(/[\\/:*?"<>|]+/g, '_');
+      if (!/\.pdf$/i.test(name)) name += '.pdf';
+
+      var note = out.pages + ' page' + (out.pages > 1 ? 's' : '') + ' · ' + K.bytes(out.bytes.length);
+      if (out.skipped.length) {
+        K.say(msgEl, 'warn', note + '. ' + out.skipped.length + ' file(s) could not be read and were left out:',
+          out.skipped.map(function (s) { return s.name + ' — ' + s.reason; }));
+      } else {
+        K.say(msgEl, 'good', 'Done — ' + note + '.');
+      }
+      K.download(out.bytes, name);
+
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      goBtn.disabled = !items.length; clearBtn.disabled = !items.length;
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

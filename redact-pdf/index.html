@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redact a PDF properly, without uploading — Kagaz</title>
+<meta name="description" content="Permanently remove text and images from a PDF in your browser. The content underneath is destroyed, not covered with a black box. Nothing is uploaded.">
+<link rel="canonical" href="https://kagaz.namastevis.in/redact-pdf/">
+<meta property="og:title" content="Redact a PDF properly — Kagaz">
+<meta property="og:description" content="Content underneath is destroyed, not covered up. Entirely in your browser.">
+<meta property="og:url" content="https://kagaz.namastevis.in/redact-pdf/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Is a black rectangle over text enough to redact a PDF?","acceptedAnswer":{"@type":"Answer","text":"No, and this is a common and serious mistake. A rectangle drawn over text is a separate object on top of it. The text is still in the file and can be selected, copied or extracted by anyone. Real redaction has to remove the underlying content."}},
+{"@type":"Question","name":"How does Kagaz redact?","acceptedAnswer":{"@type":"Answer","text":"Any page carrying a redaction is rendered to a flat image with the marked areas painted out, and the original page object is discarded. The text and images underneath are gone from the file entirely. The cost is that redacted pages stop being selectable text."}},
+{"@type":"Question","name":"Is my document uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. Everything happens in your browser. Kagaz has no server, which matters especially for the kind of document you would be redacting."}}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../">All tools</a>
+      <a href="../roadmap/">Roadmap</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Redact · nothing uploaded</p>
+  <h1>Redact PDF</h1>
+  <p class="lede">
+    Drag a box over anything that must not be seen. Kagaz <b>destroys what is underneath</b>
+    rather than covering it — which is the difference between redaction and a black rectangle
+    somebody can copy the text out from behind.
+  </p>
+
+  <div class="callout warn" style="margin-bottom:18px">
+    Redacted pages become flat images. Text on those pages will no longer be selectable or
+    searchable — that is exactly what makes the removal real. Keep your original file.
+  </div>
+
+  <section class="panel" id="panelFile">
+    <div class="head"><span class="step">1</span><h2>Your PDF</h2><span class="note" id="fileNote">no file yet</span></div>
+    <div class="body">
+      <div class="drop" id="drop">
+        <span class="big">Drop a PDF here</span>
+        <span class="small">or tap to choose · it stays on your device</span>
+      </div>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelMark" hidden>
+    <div class="head">
+      <span class="step">2</span><h2>Mark what to remove</h2>
+      <span class="note" id="markNote"></span>
+    </div>
+    <div class="body">
+      <div class="row" style="align-items:center; margin-bottom:12px">
+        <button class="btn ghost" id="prev" type="button">← Previous page</button>
+        <span class="count" id="pageLabel" style="text-align:center">page 1</span>
+        <button class="btn ghost" id="next" type="button">Next page →</button>
+      </div>
+      <p class="hint" style="margin-bottom:10px">
+        Drag across the page to cover something. Tap a box to remove it again.
+      </p>
+      <div class="marker" id="marker">
+        <canvas id="view"></canvas>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn ghost" id="clearPage" type="button">Clear this page</button>
+        <button class="btn ghost" id="clearAll" type="button">Clear every mark</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelOpts" hidden>
+    <div class="head"><span class="step">3</span><h2>Output quality</h2></div>
+    <div class="body stack">
+      <div>
+        <span class="fldlabel">Detail of redacted pages</span>
+        <div class="seg" id="dpis" role="group" aria-label="Resolution">
+          <button type="button" data-dpi="120" aria-pressed="false">screen · 120</button>
+          <button type="button" data-dpi="180" aria-pressed="true">reading · 180</button>
+          <button type="button" data-dpi="300" aria-pressed="false">print · 300</button>
+        </div>
+        <p class="hint">Only pages carrying a redaction are flattened at this resolution. Every other page is left completely untouched, text and all.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">Add a PDF</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Redact and download</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p>
+      Redacted on your own machine — the document never left it. Kagaz is free and open source,
+      made by <b>Amit Jena</b> in India.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+      <a href="../">More Kagaz tools</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>The mistake this tool exists to prevent</h2>
+    <p>
+      Drawing a black rectangle over a name does not remove the name. In a PDF, that rectangle is
+      simply another object sitting on top. The text underneath is still in the file, still
+      selectable, still copyable, and trivially extractable by anyone who thinks to try.
+    </p>
+    <p>
+      This has gone wrong publicly and expensively — court filings, government releases and
+      corporate disclosures have all leaked names that somebody believed were blacked out. The
+      information was never removed; it was only hidden from view.
+    </p>
+
+    <h2>What Kagaz does instead</h2>
+    <p>
+      Any page you mark is rendered to a flat image with the marked areas painted out, and the
+      original page object is thrown away. The text, the images and the vector content
+      underneath are gone from the file — there is nothing left to recover, because it is no
+      longer there.
+    </p>
+    <p>
+      The price is honest and worth stating plainly: <b>redacted pages stop being text.</b> They
+      cannot be selected, searched or read aloud by a screen reader. Pages you did not mark are
+      copied through untouched and keep everything they had.
+    </p>
+
+    <h2>Before you send it</h2>
+    <ul>
+      <li>Open the finished file and try to select text in the redacted area. There should be nothing there.</li>
+      <li>Check the document's own metadata — a title or author field can carry a name you just removed from the page.</li>
+      <li>Remember that redacting a name in one place does not remove it from a header, a footer, or page 14.</li>
+    </ul>
+
+    <h2>Common questions</h2>
+    <h3>Is my document uploaded?</h3>
+    <p>No, and here more than anywhere that matters. There is no server. Check the Network tab.</p>
+    <h3>Can the boxes be lifted off afterwards?</h3>
+    <p>No. There is nothing behind them — the page is a single flattened image with the content already removed.</p>
+    <h3>Why does the file get bigger?</h3>
+    <p>
+      Because a page of text stored as text is tiny, and the same page stored as an image is not.
+      Lower the resolution, or run the result through <a href="../compress-pdf/">Compress PDF</a>.
+    </p>
+    <h3>Can it find and remove every instance of a word?</h3>
+    <p>Not yet. Search-and-redact across a whole document is on the <a href="../roadmap/">roadmap</a>.</p>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../crop-pdf/">Crop PDF</a> — trims the view, does <em>not</em> remove content</li>
+      <li><a href="../compress-pdf/">Compress PDF</a> — shrink the flattened result</li>
+      <li><a href="../split-pdf/">Split PDF</a> — send only the pages that matter</li>
+      <li><a href="../watermark-pdf/">Watermark PDF</a> — mark a copy as confidential</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../roadmap/">Roadmap</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../vendor/pdf.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+  var current = null, doc = null, pageIndex = 0, dpi = 180;
+  var areas = [];              // { page, x, y, w, h } as 0–1 fractions from top-left
+
+  var marker = K.$('#marker'), view = K.$('#view');
+  var noteEl = K.$('#fileNote'), markNote = K.$('#markNote'), pageLabel = K.$('#pageLabel');
+  var countEl = K.$('#count'), goBtn = K.$('#go'), clearBtn = K.$('#clear');
+  var progEl = K.$('#prog'), msgEl = K.$('#msg'), fileMsgEl = K.$('#fileMsg');
+
+  K.dropzone(K.$('#drop'), { accept: '.pdf,application/pdf', match: K.isPdf, onFiles: function (f) { open(f[0]); } });
+
+  async function open(file) {
+    K.say(fileMsgEl, 'info', 'Reading “' + file.name + '”…');
+    try {
+      var bytes = await K.read(file);
+      var info = await ops.describe(bytes, file.name);
+      if (doc) doc.destroy();
+      doc = await K.pdfjs().getDocument({ data: bytes.slice(0) }).promise;
+      current = { name: file.name, bytes: bytes, pages: info.pages };
+      pageIndex = 0;
+      areas = [];
+      K.say(fileMsgEl, '', null);
+      await showPage();
+    } catch (err) {
+      current = null;
+      K.say(fileMsgEl, 'err', K.humanError(err));
+    }
+    render();
+  }
+
+  async function showPage() {
+    if (!current) return;
+    var page = await doc.getPage(pageIndex + 1);
+    // A moderate working resolution — enough to read, small enough to stay quick.
+    var canvas = await K.renderPage(page, 110, 6e6);
+    view.width = canvas.width;
+    view.height = canvas.height;
+    view.getContext('2d').drawImage(canvas, 0, 0);
+    canvas.width = canvas.height = 0;
+    page.cleanup();
+    drawBoxes();
+    render();
+  }
+
+  /* ------------------------------------------------------ marking boxes */
+
+  function drawBoxes() {
+    K.$$('.markbox', marker).forEach(function (n) { n.remove(); });
+    areas.forEach(function (a, i) {
+      if (a.page !== pageIndex) return;
+      var box = K.el('span', {
+        class: 'markbox',
+        title: 'Tap to remove this mark',
+        style: 'left:' + (a.x * 100) + '%; top:' + (a.y * 100) + '%; width:' + (a.w * 100) + '%; height:' + (a.h * 100) + '%;',
+        onclick: function (e) { e.stopPropagation(); areas.splice(i, 1); drawBoxes(); render(); }
+      });
+      marker.appendChild(box);
+    });
+  }
+
+  var dragging = false, startPt = null, ghost = null;
+
+  function frac(e) {
+    var r = view.getBoundingClientRect();
+    var t = e.touches ? e.touches[0] : e;
+    return {
+      x: Math.max(0, Math.min(1, (t.clientX - r.left) / r.width)),
+      y: Math.max(0, Math.min(1, (t.clientY - r.top) / r.height))
+    };
+  }
+
+  function beginDrag(e) {
+    if (!current || e.target.classList.contains('markbox')) return;
+    e.preventDefault();
+    dragging = true;
+    startPt = frac(e);
+    ghost = K.el('span', { class: 'markbox', style: 'left:0;top:0;width:0;height:0' });
+    marker.appendChild(ghost);
+  }
+
+  function duringDrag(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    var p = frac(e);
+    var x = Math.min(startPt.x, p.x), y = Math.min(startPt.y, p.y);
+    var w = Math.abs(p.x - startPt.x), h = Math.abs(p.y - startPt.y);
+    ghost.style.left = (x * 100) + '%';
+    ghost.style.top = (y * 100) + '%';
+    ghost.style.width = (w * 100) + '%';
+    ghost.style.height = (h * 100) + '%';
+  }
+
+  function endDrag(e) {
+    if (!dragging) return;
+    dragging = false;
+    var p = frac(e.changedTouches ? { touches: e.changedTouches } : e);
+    var x = Math.min(startPt.x, p.x), y = Math.min(startPt.y, p.y);
+    var w = Math.abs(p.x - startPt.x), h = Math.abs(p.y - startPt.y);
+    if (ghost) { ghost.remove(); ghost = null; }
+    // Ignore accidental taps.
+    if (w > 0.008 && h > 0.004) areas.push({ page: pageIndex, x: x, y: y, w: w, h: h });
+    drawBoxes();
+    render();
+  }
+
+  marker.addEventListener('pointerdown', beginDrag);
+  marker.addEventListener('pointermove', duringDrag);
+  window.addEventListener('pointerup', endDrag);
+  marker.addEventListener('touchstart', beginDrag, { passive: false });
+  marker.addEventListener('touchmove', duringDrag, { passive: false });
+  marker.addEventListener('touchend', endDrag);
+
+  /* ------------------------------------------------------------ controls */
+
+  K.$('#prev').addEventListener('click', async function () {
+    if (pageIndex > 0) { pageIndex--; await showPage(); }
+  });
+  K.$('#next').addEventListener('click', async function () {
+    if (current && pageIndex < current.pages - 1) { pageIndex++; await showPage(); }
+  });
+  K.$('#clearPage').addEventListener('click', function () {
+    areas = areas.filter(function (a) { return a.page !== pageIndex; });
+    drawBoxes(); render();
+  });
+  K.$('#clearAll').addEventListener('click', function () {
+    areas = []; drawBoxes(); render();
+  });
+  K.$$('#dpis button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      dpi = parseInt(b.getAttribute('data-dpi'), 10);
+      K.$$('#dpis button').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+    });
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (!current) return;
+    if (e.key === 'ArrowLeft') K.$('#prev').click();
+    if (e.key === 'ArrowRight') K.$('#next').click();
+  });
+
+  function render() {
+    K.$('#panelMark').hidden = !current;
+    K.$('#panelOpts').hidden = !current;
+    if (!current) {
+      noteEl.textContent = 'no file yet';
+      countEl.textContent = 'Add a PDF';
+      clearBtn.disabled = goBtn.disabled = true;
+      return;
+    }
+
+    var onPage = areas.filter(function (a) { return a.page === pageIndex; }).length;
+    var pagesTouched = {};
+    areas.forEach(function (a) { pagesTouched[a.page] = true; });
+    var touched = Object.keys(pagesTouched).length;
+
+    noteEl.textContent = current.pages + ' pages · ' + K.bytes(current.bytes.length);
+    pageLabel.innerHTML = 'page <b>' + (pageIndex + 1) + '</b> of ' + current.pages;
+    markNote.textContent = onPage + ' on this page · ' + areas.length + ' in total';
+    countEl.innerHTML = '<b>' + areas.length + '</b> mark' + (areas.length === 1 ? '' : 's') + ' · ' + touched + ' page' + (touched === 1 ? '' : 's') + ' will be flattened';
+    K.$('#prev').disabled = pageIndex === 0;
+    K.$('#next').disabled = pageIndex >= current.pages - 1;
+    clearBtn.disabled = false;
+    goBtn.disabled = areas.length === 0;
+    K.$('#panelFile').classList.add('done');
+
+    K.say(msgEl, areas.length ? '' : 'info', areas.length ? null : 'Drag across the page above to mark something for removal.');
+  }
+
+  clearBtn.addEventListener('click', function () {
+    if (doc) { doc.destroy(); doc = null; }
+    current = null; areas = []; pageIndex = 0;
+    K.$$('.markbox', marker).forEach(function (n) { n.remove(); });
+    K.say(msgEl, '', null); K.say(fileMsgEl, '', null);
+    render();
+  });
+
+  goBtn.addEventListener('click', async function () {
+    if (!current) return;
+    if (!window.confirm(
+      'Redaction is permanent.\n\n' +
+      'Pages carrying a mark become flat images — the text and images underneath are removed ' +
+      'from the file and cannot be recovered. Those pages will no longer be selectable or ' +
+      'searchable.\n\nKeep your original. Go ahead?')) return;
+
+    goBtn.disabled = true; clearBtn.disabled = true;
+    var bar = K.progress(progEl);
+    K.say(msgEl, 'info', 'Removing…');
+
+    try {
+      var out = await ops.redact(current.bytes, {
+        areas: areas,
+        name: current.name,
+        onProgress: function (f, label) { bar.set(f * 0.95); if (label) K.say(msgEl, 'info', 'Working — ' + label + '…'); }
+      }, async function (index, info) {
+        var page = await doc.getPage(index + 1);
+        var canvas = await K.renderPage(page, dpi);
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#000000';
+        info.areas.forEach(function (a) {
+          ctx.fillRect(
+            Math.floor(a.x * canvas.width), Math.floor(a.y * canvas.height),
+            Math.ceil(a.w * canvas.width), Math.ceil(a.h * canvas.height)
+          );
+        });
+        var enc = await K.canvasToBytes(canvas, 'image/jpeg', 0.85);
+        canvas.width = canvas.height = 0;
+        page.cleanup();
+        await K.tick();
+        if (!enc) throw new Error('Page ' + (index + 1) + ' could not be rendered.');
+        return { data: enc.bytes };
+      });
+
+      bar.set(1);
+      K.say(msgEl, 'good',
+        out.areas + ' area' + (out.areas === 1 ? '' : 's') + ' removed across ' + out.flattened +
+        ' page' + (out.flattened === 1 ? '' : 's') + '. The other ' + (out.pages - out.flattened) +
+        ' page(s) kept their text. ' + K.bytes(out.bytes.length) + '.');
+      K.download(out.bytes, current.name.replace(/\.pdf$/i, '') + '_redacted.pdf');
+
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

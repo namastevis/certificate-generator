@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign a PDF without uploading — Kagaz</title>
+<meta name="description" content="Draw a signature and place it on a PDF, entirely in your browser. Your signature and your document never leave your device. Free and open source.">
+<link rel="canonical" href="https://kagaz.namastevis.in/sign-pdf/">
+<meta property="og:title" content="Sign a PDF without uploading — Kagaz">
+<meta property="og:description" content="Draw a signature and place it on a PDF. Nothing is uploaded.">
+<meta property="og:url" content="https://kagaz.namastevis.in/sign-pdf/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<style>
+  .pad{border:1.5px dashed var(--line-strong); border-radius:3px; background:#fff; touch-action:none; cursor:crosshair; display:block; width:100%; max-width:520px}
+  .padwrap{position:relative}
+  .padline{position:absolute; left:8%; right:8%; bottom:26%; border-bottom:1px solid var(--line-strong); pointer-events:none}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Is my signature uploaded anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The signature you draw stays in your browser and is written straight into the PDF on your device. Kagaz has no server and stores nothing."}},
+{"@type":"Question","name":"Is this a legally binding electronic signature?","acceptedAnswer":{"@type":"Answer","text":"No. This places a picture of your signature onto the page, which is what most everyday documents need. It carries no certificate, timestamp or audit trail, so it is not a qualified or certificate-based digital signature."}},
+{"@type":"Question","name":"Can I sign on a phone?","acceptedAnswer":{"@type":"Answer","text":"Yes, and it is easier — draw with a finger on the signature pad."}}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../">All tools</a>
+      <a href="../roadmap/">Roadmap</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Sign · nothing uploaded</p>
+  <h1>Sign PDF</h1>
+  <p class="lede">
+    Draw your signature with a finger or a mouse and place it on the page.
+    <b>Your signature is as sensitive as the document</b> — here, neither one leaves your device.
+  </p>
+
+  <section class="panel" id="panelFile">
+    <div class="head"><span class="step">1</span><h2>Your PDF</h2><span class="note" id="fileNote">no file yet</span></div>
+    <div class="body">
+      <div class="drop" id="drop">
+        <span class="big">Drop a PDF here</span>
+        <span class="small">or tap to choose · one file at a time</span>
+      </div>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelSig" hidden>
+    <div class="head"><span class="step">2</span><h2>Your signature</h2><span class="note" id="sigNote">nothing drawn yet</span></div>
+    <div class="body stack">
+      <div>
+        <span class="fldlabel">Draw it</span>
+        <div class="padwrap">
+          <canvas class="pad" id="pad" width="1040" height="360"></canvas>
+          <span class="padline" aria-hidden="true"></span>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn ghost" id="clearPad" type="button">Clear</button>
+          <button class="btn ghost" id="thicker" type="button">Thicker</button>
+          <button class="btn ghost" id="thinner" type="button">Thinner</button>
+        </div>
+      </div>
+      <div>
+        <span class="fldlabel">Or use a photo of a signature</span>
+        <div class="drop" id="imgDrop" style="min-height:80px; padding:14px">
+          <span class="big" id="imgLabel">Drop a PNG or JPG</span>
+          <span class="small">a PNG with a transparent background looks best</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelPlace" hidden>
+    <div class="head"><span class="step">3</span><h2>Where it goes</h2><span class="note" id="planNote"></span></div>
+    <div class="body stack">
+      <div>
+        <span class="fldlabel">Position on the page</span>
+        <div class="seg" id="positions" role="group" aria-label="Position">
+          <button type="button" data-pos="bottom-left" aria-pressed="false">bottom left</button>
+          <button type="button" data-pos="bottom-centre" aria-pressed="false">bottom centre</button>
+          <button type="button" data-pos="bottom-right" aria-pressed="true">bottom right</button>
+        </div>
+        <div class="seg" id="positions2" role="group" aria-label="Position" style="margin-top:6px">
+          <button type="button" data-pos="top-left" aria-pressed="false">top left</button>
+          <button type="button" data-pos="top-centre" aria-pressed="false">top centre</button>
+          <button type="button" data-pos="top-right" aria-pressed="false">top right</button>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label class="fld" for="scale">Width — <span id="scVal">30</span>% of the page</label>
+          <input type="range" id="scale" min="8" max="80" value="30" step="1">
+        </div>
+        <div>
+          <label class="fld" for="margin">Distance from edge — <span id="mVal">40</span> pt</label>
+          <input type="range" id="margin" min="8" max="120" value="40" step="4">
+        </div>
+      </div>
+      <div>
+        <label class="fld" for="ranges">Pages to sign</label>
+        <input type="text" id="ranges" value="last" spellcheck="false" placeholder="last, all, or 3">
+        <p class="hint"><code>last</code> signs the final page, which is usually what you want. <code>all</code> initials every page.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">Add a PDF</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Sign and download</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p>
+      Signed on your own machine — neither your signature nor the document was uploaded.
+      Kagaz is free and open source, made by <b>Amit Jena</b> in India.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+      <a href="../">More Kagaz tools</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>What this is, and what it is not</h2>
+    <p>
+      This places a picture of your signature onto the page. That is what the overwhelming
+      majority of everyday paperwork actually asks for — a scanned or drawn signature on a form,
+      a letter, a consent slip.
+    </p>
+    <p>
+      <b>It is not a certificate-based digital signature.</b> There is no cryptographic
+      certificate, no trusted timestamp, no audit trail, and nothing a verifier could check to
+      prove who signed or that the document is unchanged since. Anything offering those needs a
+      certificate authority and a server, which is outside what Kagaz does. If a contract
+      explicitly requires a qualified or digital signature, this is not it.
+    </p>
+
+    <h2>Why doing this locally matters more than usual</h2>
+    <p>
+      A signature is reusable. Once an image of it exists on somebody else's server, it can be
+      pasted onto any document at all. Of everything on this site, this is the tool where "it
+      never leaves your device" is worth the most — so it is worth checking. Open the Network
+      tab and watch nothing happen.
+    </p>
+
+    <h2>Getting a good-looking signature</h2>
+    <ul>
+      <li>On a phone or tablet, draw with a finger. It is far better than a mouse.</li>
+      <li>Sign larger than feels natural — the pad scales down, and bigger strokes look smoother.</li>
+      <li>For a photo of a signature on paper, crop tightly and use a PNG with the background removed. A JPG brings its white rectangle along with it.</li>
+    </ul>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../watermark-pdf/">Watermark PDF</a> — stamp text or a logo instead</li>
+      <li><a href="../merge-pdf/">Merge PDF</a> — attach the signed page to a bundle</li>
+      <li><a href="../redact-pdf/">Redact PDF</a> — remove content before sending</li>
+      <li><a href="../certificate/">Certificate Press</a> — put a signature on hundreds of certificates at once</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../roadmap/">Roadmap</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+  var current = null, uploaded = null, position = 'bottom-right';
+  var drawn = false, penWidth = 5;
+
+  var pad = K.$('#pad'), ctx = pad.getContext('2d');
+  var noteEl = K.$('#fileNote'), sigNote = K.$('#sigNote'), planNote = K.$('#planNote');
+  var countEl = K.$('#count'), goBtn = K.$('#go'), clearBtn = K.$('#clear');
+  var progEl = K.$('#prog'), msgEl = K.$('#msg'), fileMsgEl = K.$('#fileMsg');
+
+  ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#14171D';
+
+  /* ------------------------------------------------------------ drawing */
+
+  var drawing = false, last = null;
+
+  function point(e) {
+    var r = pad.getBoundingClientRect();
+    var t = e.touches ? e.touches[0] : e;
+    return {
+      x: (t.clientX - r.left) * (pad.width / r.width),
+      y: (t.clientY - r.top) * (pad.height / r.height)
+    };
+  }
+
+  function start(e) {
+    e.preventDefault();
+    drawing = true;
+    last = point(e);
+  }
+  function moveTo(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    var p = point(e);
+    ctx.lineWidth = penWidth;
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    last = p;
+    if (!drawn) { drawn = true; uploaded = null; K.$('#imgLabel').textContent = 'Drop a PNG or JPG'; }
+    render();
+  }
+  function end() { drawing = false; }
+
+  pad.addEventListener('pointerdown', start);
+  pad.addEventListener('pointermove', moveTo);
+  window.addEventListener('pointerup', end);
+  pad.addEventListener('touchstart', start, { passive: false });
+  pad.addEventListener('touchmove', moveTo, { passive: false });
+  pad.addEventListener('touchend', end);
+
+  K.$('#clearPad').addEventListener('click', function () {
+    ctx.clearRect(0, 0, pad.width, pad.height);
+    drawn = false;
+    render();
+  });
+  K.$('#thicker').addEventListener('click', function () { penWidth = Math.min(18, penWidth + 2); });
+  K.$('#thinner').addEventListener('click', function () { penWidth = Math.max(1, penWidth - 2); });
+
+  /** Trim the transparent border so the signature is not mostly empty space. */
+  function trimmedSignature() {
+    var img = ctx.getImageData(0, 0, pad.width, pad.height);
+    var d = img.data, minX = pad.width, minY = pad.height, maxX = 0, maxY = 0, found = false;
+    for (var y = 0; y < pad.height; y++) {
+      for (var x = 0; x < pad.width; x++) {
+        if (d[(y * pad.width + x) * 4 + 3] > 8) {
+          found = true;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (!found) return null;
+
+    var pad2 = 12;
+    minX = Math.max(0, minX - pad2); minY = Math.max(0, minY - pad2);
+    maxX = Math.min(pad.width - 1, maxX + pad2); maxY = Math.min(pad.height - 1, maxY + pad2);
+
+    var out = document.createElement('canvas');
+    out.width = maxX - minX + 1;
+    out.height = maxY - minY + 1;
+    out.getContext('2d').drawImage(pad, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
+    return out;
+  }
+
+  /* ------------------------------------------------------------- inputs */
+
+  K.dropzone(K.$('#drop'), { accept: '.pdf,application/pdf', match: K.isPdf, onFiles: function (f) { open(f[0]); } });
+
+  K.dropzone(K.$('#imgDrop'), {
+    accept: 'image/png,image/jpeg,.png,.jpg,.jpeg',
+    match: function (f) { return /\.(png|jpe?g)$/i.test(f.name) || /^image\/(png|jpeg)$/.test(f.type); },
+    onFiles: async function (files) {
+      var f = files[0];
+      uploaded = { type: /\.png$/i.test(f.name) || f.type === 'image/png' ? 'png' : 'jpg', bytes: await K.read(f) };
+      K.$('#imgLabel').textContent = f.name + ' · ' + K.bytes(f.size);
+      ctx.clearRect(0, 0, pad.width, pad.height);
+      drawn = false;
+      render();
+    }
+  });
+
+  async function open(file) {
+    K.say(fileMsgEl, 'info', 'Reading “' + file.name + '”…');
+    try {
+      var bytes = await K.read(file);
+      var info = await ops.describe(bytes, file.name);
+      current = { name: file.name, bytes: bytes, pages: info.pages };
+      K.say(fileMsgEl, 'warn', K.sizeWarning(file.size));
+    } catch (err) {
+      current = null;
+      K.say(fileMsgEl, 'err', K.humanError(err));
+    }
+    render();
+  }
+
+  K.$$('#positions button, #positions2 button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      position = b.getAttribute('data-pos');
+      K.$$('#positions button, #positions2 button').forEach(function (o) {
+        o.setAttribute('aria-pressed', String(o.getAttribute('data-pos') === position));
+      });
+      render();
+    });
+  });
+  K.$('#scale').addEventListener('input', function () { K.$('#scVal').textContent = this.value; });
+  K.$('#margin').addEventListener('input', function () { K.$('#mVal').textContent = this.value; });
+  K.$('#ranges').addEventListener('input', render);
+
+  function selection() {
+    if (!current) return [];
+    return ops.parseRanges(K.$('#ranges').value, current.pages).indices;
+  }
+
+  function render() {
+    K.$('#panelSig').hidden = !current;
+    K.$('#panelPlace').hidden = !current;
+    if (!current) {
+      noteEl.textContent = 'no file yet';
+      countEl.textContent = 'Add a PDF';
+      clearBtn.disabled = goBtn.disabled = true;
+      return;
+    }
+
+    var have = drawn || !!uploaded;
+    var sel = selection();
+    sigNote.textContent = drawn ? 'drawn' : (uploaded ? 'image loaded' : 'nothing drawn yet');
+    noteEl.textContent = current.pages + ' pages · ' + K.bytes(current.bytes.length);
+    planNote.textContent = sel.length + ' page' + (sel.length === 1 ? '' : 's') + ' · ' + position.replace('-', ' ');
+    countEl.innerHTML = have
+      ? '<b>' + sel.length + '</b> page' + (sel.length === 1 ? '' : 's') + ' · ' + position.replace('-', ' ')
+      : 'Draw a signature above';
+    clearBtn.disabled = false;
+    goBtn.disabled = !have || !sel.length;
+    K.$('#panelFile').classList.add('done');
+    K.$('#panelSig').classList.toggle('done', have);
+
+    if (!sel.length) K.say(msgEl, 'warn', 'That page selection is empty.');
+    else if (!have) K.say(msgEl, 'info', 'Draw your signature, or drop in an image of one.');
+    else K.say(msgEl, '', null);
+  }
+
+  clearBtn.addEventListener('click', function () {
+    current = null; uploaded = null; drawn = false;
+    ctx.clearRect(0, 0, pad.width, pad.height);
+    K.$('#imgLabel').textContent = 'Drop a PNG or JPG';
+    K.say(msgEl, '', null); K.say(fileMsgEl, '', null);
+    render();
+  });
+
+  goBtn.addEventListener('click', async function () {
+    if (!current) return;
+    goBtn.disabled = true; clearBtn.disabled = true;
+    var bar = K.progress(progEl);
+    K.say(msgEl, 'info', 'Signing…');
+
+    try {
+      var image, type;
+      if (drawn) {
+        var trimmed = trimmedSignature();
+        if (!trimmed) throw new Error('The signature pad looks empty.');
+        var enc = await K.canvasToBytes(trimmed, 'image/png');
+        image = enc.bytes; type = 'png';
+      } else {
+        image = uploaded.bytes; type = uploaded.type;
+      }
+
+      bar.set(0.5);
+      var out = await ops.stampPages(current.bytes, {
+        image: image,
+        imageType: type,
+        scale: parseInt(K.$('#scale').value, 10) / 100,
+        position: position,
+        margin: parseInt(K.$('#margin').value, 10),
+        opacity: 1,
+        ranges: K.$('#ranges').value,
+        name: current.name
+      });
+      bar.set(1);
+
+      K.say(msgEl, 'good', 'Signed on ' + out.stamped + ' page' + (out.stamped === 1 ? '' : 's') + ' — ' + K.bytes(out.bytes.length) + '.');
+      K.download(out.bytes, current.name.replace(/\.pdf$/i, '') + '_signed.pdf');
+
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

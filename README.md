@@ -12,13 +12,31 @@ Live at **[kagaz.namastevis.in](https://kagaz.namastevis.in)** · MIT licensed �
 
 ## The tools
 
-| | | |
-|---|---|---|
-| **[Merge PDF](https://kagaz.namastevis.in/merge-pdf/)** | Join files into one | Page size, orientation and rotation preserved exactly |
-| **[Split PDF](https://kagaz.namastevis.in/split-pdf/)** | Extract or break apart | By range, every N pages, one per page, or at uneven breakpoints |
-| **[Compress PDF](https://kagaz.namastevis.in/compress-pdf/)** | Shrink the file | Downsamples embedded images and **leaves text as text** |
-| **[PDF to JPG](https://kagaz.namastevis.in/pdf-to-jpg/)** | Pages as images | You choose the dpi — 72 for screen, 300 for print |
-| **[Certificate Press](https://kagaz.namastevis.in/certificate/)** | One design × many names | Certificates, badges, place cards, tickets, ID cards |
+**Organise** — [Merge](https://kagaz.namastevis.in/merge-pdf/) ·
+[Split](https://kagaz.namastevis.in/split-pdf/) ·
+[Organize](https://kagaz.namastevis.in/organize-pdf/) ·
+[Rotate](https://kagaz.namastevis.in/rotate-pdf/) ·
+[Crop](https://kagaz.namastevis.in/crop-pdf/)
+
+**Convert and shrink** — [Compress](https://kagaz.namastevis.in/compress-pdf/) ·
+[PDF to JPG](https://kagaz.namastevis.in/pdf-to-jpg/) ·
+[JPG to PDF](https://kagaz.namastevis.in/jpg-to-pdf/) ·
+[Scan to PDF](https://kagaz.namastevis.in/scan-to-pdf/)
+
+**Mark and protect** — [Redact](https://kagaz.namastevis.in/redact-pdf/) ·
+[Sign](https://kagaz.namastevis.in/sign-pdf/) ·
+[Watermark](https://kagaz.namastevis.in/watermark-pdf/) ·
+[Page numbers](https://kagaz.namastevis.in/page-numbers/)
+
+**Batch** — [Certificate Press](https://kagaz.namastevis.in/certificate/) — one design × many
+names, from a spreadsheet.
+
+Two of these are worth calling out. **Compress** downsamples the images inside the document and
+leaves text as text, instead of flattening every page into a picture. **Redact** actually destroys
+the content underneath rather than drawing a black rectangle over selectable text.
+
+There is a [roadmap](https://kagaz.namastevis.in/roadmap/) listing what is being built next and,
+just as importantly, what will never be built here and why.
 
 ## Why it works this way
 
@@ -31,8 +49,9 @@ it. It also means running a job costs nothing, so there is no reason to meter it
 
 ## What it deliberately does not do
 
-- **No PDF to Word.** It cannot be done well client-side. Every free tool offering it is
-  sending your document somewhere.
+- **No office-format conversion**, in either direction, and no AI features. Each one needs a
+  server, and a server means uploading your document. The
+  [roadmap](https://kagaz.namastevis.in/roadmap/) lists every excluded tool with its reason.
 - **No password cracking.** Encrypted files are refused, not guessed at.
 - **No silent degradation.** When an image cannot be safely re-encoded — CMYK, JPEG 2000,
   JBIG2, CCITT fax, indexed colour — it is left alone and reported, rather than corrupted
@@ -64,19 +83,20 @@ folder on any web server. See [DEPLOY.md](DEPLOY.md) for the DNS and redirect no
 ## Layout
 
 ```
-index.html            landing page
-merge-pdf/            one tool, one self-contained HTML file
-split-pdf/
-compress-pdf/
-pdf-to-jpg/
-certificate/          Certificate Press
-contribute/           how to help, and where to send a chai
-test/                 in-browser test bench
-shared/kagaz.css      one stylesheet for every page
-shared/kagaz.js       browser helpers — drop zones, downloads, canvas codec, messages
-shared/ops.js         the PDF logic, deliberately DOM-free so Node can test it
-vendor/               pdf-lib, pdf.js, JSZip, fontkit — vendored, never a CDN
-tests/stress.mjs      throws deliberately broken PDFs at shared/ops.js
+index.html              landing page
+roadmap/                what exists, what is coming, what never will
+merge-pdf/ split-pdf/ compress-pdf/ pdf-to-jpg/ jpg-to-pdf/
+organize-pdf/ rotate-pdf/ crop-pdf/ page-numbers/
+watermark-pdf/ sign-pdf/ scan-to-pdf/ redact-pdf/
+certificate/            Certificate Press
+contribute/             how to help, and where to send a chai
+test/                   in-browser test bench
+shared/kagaz.css        one stylesheet for every page
+shared/kagaz.js         browser helpers — drop zones, downloads, canvas codec, thumbnails
+shared/ops.js           the PDF logic, deliberately DOM-free so Node can test it
+vendor/                 pdf-lib, pdf.js, JSZip, fontkit — vendored, never a CDN
+tests/stress.mjs        throws deliberately broken PDFs at shared/ops.js
+tests/verify.mjs        fails if any page loads an external asset
 ```
 
 No framework, no bundler, no build step. Clone it and open a file.
@@ -84,13 +104,17 @@ No framework, no bundler, no build step. Clone it and open a file.
 ## Tests
 
 ```bash
-node tests/stress.mjs
+node tests/stress.mjs     # 85 checks on the PDF engine
+node tests/verify.mjs     # 65 checks on the site itself
 ```
 
-61 checks covering malformed input, hostile filenames, page-range parsing, merge and split
-correctness, compression safety and extreme documents. Every one asserts that Kagaz either
-works or **refuses cleanly with a message a person could act on** — a crash, a hang or a
-silently broken output file is a failure.
+The first covers malformed input, hostile filenames, page-range parsing, merge and split
+correctness, page geometry, stamping, redaction, compression safety and extreme documents.
+Every one asserts that Kagaz either works or **refuses cleanly with a message a person could
+act on** — a crash, a hang or a silently broken output file is a failure.
+
+The second enforces the promise the whole project rests on: it **fails if any page loads an
+asset from another origin**, or if the shared scripts ever gain a `fetch`.
 
 `sharp` is picked up automatically if it happens to be installed, which exercises the real
 pixel path; without it a stub codec still covers every branch. Neither is required.

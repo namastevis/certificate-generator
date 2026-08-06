@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kagaz roadmap — what exists, what is coming, what never will</title>
+<meta name="description" content="Every Kagaz tool that works today, everything planned, and the tools that will never exist here because they cannot be done without uploading your file.">
+<link rel="canonical" href="https://kagaz.namastevis.in/roadmap/">
+<meta property="og:title" content="Kagaz roadmap — including what will never be built">
+<meta property="og:description" content="What exists, what is coming, and what is impossible without a server.">
+<meta property="og:url" content="https://kagaz.namastevis.in/roadmap/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<style>
+  .rows{border-top:1px solid var(--line-strong); margin-top:14px}
+  .rowitem{display:flex; gap:14px; padding:14px 0; border-bottom:1px solid var(--line); align-items:baseline; flex-wrap:wrap}
+  .rowitem .nm{flex:0 0 190px; font-weight:700; font-size:15px; letter-spacing:-.01em}
+  .rowitem .nm a{text-decoration:none; color:var(--ink)}
+  .rowitem .nm a:hover{color:var(--blue-deep)}
+  .rowitem .why{flex:1 1 300px; font-size:14.5px; color:#2c313a; margin:0}
+  .tag2{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase;
+    border-radius:2px; padding:3px 7px; flex:0 0 auto; align-self:center}
+  .tag2.live{background:#eaf6ee; color:var(--ok); border:1px solid #cfe6d7}
+  .tag2.soon{background:var(--blue-wash); color:var(--blue-deep); border:1px solid #cfe0fb}
+  .tag2.never{background:#fdeceb; color:#8a1410; border:1px solid #f2c4c1}
+</style>
+</head>
+<body>
+<div class="wrap narrow">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../">All tools</a>
+      <a href="../roadmap/" aria-current="page">Roadmap</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Including the parts that will never exist</p>
+  <h1>Roadmap</h1>
+  <p class="lede">
+    Kagaz has one architectural rule — <b>your file never leaves your device</b> — and that rule
+    decides what can be built here and what cannot. This page lists all three categories, including
+    the last one, because a roadmap that only contains good news is a marketing page.
+  </p>
+
+  <section class="prose" style="max-width:none">
+
+    <h2>Working today</h2>
+    <div class="rows">
+      <div class="rowitem"><span class="nm"><a href="../merge-pdf/">Merge PDF</a></span><span class="tag2 live">live</span><p class="why">Join files into one. Page sizes and rotation preserved exactly.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../split-pdf/">Split PDF</a></span><span class="tag2 live">live</span><p class="why">Extract a range, break every N pages, one file per page, or cut at uneven points.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../compress-pdf/">Compress PDF</a></span><span class="tag2 live">live</span><p class="why">Downsamples the images inside and leaves the text as text. Reports what it skipped and why.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../pdf-to-jpg/">PDF to JPG</a></span><span class="tag2 live">live</span><p class="why">Pages as images at whatever resolution you choose.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../jpg-to-pdf/">JPG to PDF</a></span><span class="tag2 live">live</span><p class="why">Images into one document, with page size and margin control.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../organize-pdf/">Organize PDF</a></span><span class="tag2 live">live</span><p class="why">Reorder, delete, duplicate and rotate pages on a visual grid.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../rotate-pdf/">Rotate PDF</a></span><span class="tag2 live">live</span><p class="why">Turn pages and save it into the file, so it stays turned for everyone.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../crop-pdf/">Crop PDF</a></span><span class="tag2 live">live</span><p class="why">Trim margins with a live preview.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../page-numbers/">Page numbers</a></span><span class="tag2 live">live</span><p class="why">Position, starting number, wording, colour, and which pages.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../watermark-pdf/">Watermark PDF</a></span><span class="tag2 live">live</span><p class="why">Text or a logo, tiled or centred, with opacity and angle.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../sign-pdf/">Sign PDF</a></span><span class="tag2 live">live</span><p class="why">Draw a signature and place it. Not a certificate-based digital signature — see below.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../scan-to-pdf/">Scan to PDF</a></span><span class="tag2 live">live</span><p class="why">Phone camera to PDF with no app installed and no photograph uploaded.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../redact-pdf/">Redact PDF</a></span><span class="tag2 live">live</span><p class="why">Actually destroys the content underneath rather than covering it with a rectangle.</p></div>
+      <div class="rowitem"><span class="nm"><a href="../certificate/">Certificate Press</a></span><span class="tag2 live">live</span><p class="why">One design, many names — certificates, badges, ID cards, from a spreadsheet.</p></div>
+    </div>
+
+    <h2>Being built</h2>
+    <p>
+      All of these are possible in a browser. They are simply work, and this is a project built in
+      evenings. Anything here is fair game if you would like to <a href="../contribute/">pick one up</a>.
+    </p>
+    <div class="rows">
+      <div class="rowitem"><span class="nm">Edit PDF</span><span class="tag2 soon">planned</span><p class="why">Add text, shapes and images to an existing page. The PDF side is straightforward; the editing interface is the real work.</p></div>
+      <div class="rowitem"><span class="nm">OCR</span><span class="tag2 soon">planned</span><p class="why">Make a scan searchable. Fully possible in-browser, but the language data is 10–15 MB per language and it is slow on a phone, so it needs care to not feel broken.</p></div>
+      <div class="rowitem"><span class="nm">Fill PDF forms</span><span class="tag2 soon">planned</span><p class="why">Detect existing form fields, fill them, and flatten. The underlying library already supports it.</p></div>
+      <div class="rowitem"><span class="nm">Compare two PDFs</span><span class="tag2 soon">planned</span><p class="why">Side-by-side text and visual differences between two versions.</p></div>
+      <div class="rowitem"><span class="nm">PDF to Markdown</span><span class="tag2 soon">planned</span><p class="why">Text extraction with headings, lists and tables preserved. Quality will vary honestly by document, which is worth saying up front.</p></div>
+      <div class="rowitem"><span class="nm">Repair a damaged PDF</span><span class="tag2 soon">planned</span><p class="why">Partly works already — files with broken cross-reference tables often open here. A dedicated recovery tool would go further.</p></div>
+      <div class="rowitem"><span class="nm">Password protect · remove a known password</span><span class="tag2 soon">planned</span><p class="why">Genuinely possible but genuinely delicate: it means implementing PDF encryption by hand, and that is the kind of code that is subtly wrong for years. It will take as long as it takes. Kagaz will never attempt to <em>guess</em> a password.</p></div>
+      <div class="rowitem"><span class="nm">Automatic scan cropping</span><span class="tag2 soon">planned</span><p class="why">Edge detection and perspective correction for photographed pages — the honest gap between Scan to PDF and a dedicated scanner app.</p></div>
+      <div class="rowitem"><span class="nm">Search and redact</span><span class="tag2 soon">planned</span><p class="why">Find every occurrence of a name across a document and remove them all, rather than marking each one by hand.</p></div>
+      <div class="rowitem"><span class="nm">Offline install</span><span class="tag2 soon">planned</span><p class="why">A service worker so Kagaz installs like an app and survives having no network at all.</p></div>
+      <div class="rowitem"><span class="nm">Indian language interfaces</span><span class="tag2 soon">planned</span><p class="why">Hindi, Odia, Tamil, Bengali. This needs no programming at all — just someone willing to translate.</p></div>
+    </div>
+
+    <h2>What will never be here</h2>
+    <p>
+      These are not oversights and they are not on a waiting list. Each one requires software that
+      cannot run inside a browser tab, which means a server, which means uploading your document to
+      a computer you do not control. That is the one thing Kagaz exists to avoid, so the answer is
+      permanently no.
+    </p>
+    <p>
+      Other sites do offer them, and for a restaurant menu that trade may well be worth it. It is
+      worth knowing you are making it.
+    </p>
+
+    <div class="rows">
+      <div class="rowitem">
+        <span class="nm">PDF to Word, Excel, PowerPoint</span><span class="tag2 never">never</span>
+        <p class="why">
+          A PDF describes where marks sit on a page. It does not know what a paragraph, a table or a
+          heading is. Reconstructing an editable document means inferring all of that structure back —
+          a heavy, model-driven job that no browser can do well. A bad version would produce a mess
+          and quietly damage the trust the rest of this site runs on.
+        </p>
+      </div>
+      <div class="rowitem">
+        <span class="nm">Word, Excel, PowerPoint to PDF</span><span class="tag2 never">never</span>
+        <p class="why">
+          Converting the other way means laying out an office document exactly as its own application
+          would — the same fonts, the same line breaking, the same pagination. In practice that means
+          running a full office suite on a server. Anything short of it gets the layout wrong, and a
+          contract that repaginates is worse than no conversion at all.
+        </p>
+      </div>
+      <div class="rowitem">
+        <span class="nm">HTML or a web page to PDF</span><span class="tag2 never">never</span>
+        <p class="why">
+          This needs the page to be fetched and rendered somewhere. A browser cannot fetch an arbitrary
+          website from another origin, and the tools that do this run a headless browser on a server.
+          For a page you can already open, your browser's own print-to-PDF does the job perfectly.
+        </p>
+      </div>
+      <div class="rowitem">
+        <span class="nm">PDF/A for archiving</span><span class="tag2 never">never</span>
+        <p class="why">
+          The standard requires embedded colour profiles, full font embedding and compliance validation
+          against a specification. Producing a file that <em>claims</em> to be PDF/A without being able
+          to verify it is worse than not offering it, because the whole point is that an archive can
+          trust the label.
+        </p>
+      </div>
+      <div class="rowitem">
+        <span class="nm">AI summarising and translation</span><span class="tag2 never">never</span>
+        <p class="why">
+          Both mean sending your document's contents to a model running on somebody else's hardware.
+          There is no version of this that keeps the promise on the front page.
+        </p>
+      </div>
+      <div class="rowitem">
+        <span class="nm">Certificate-based e-signatures</span><span class="tag2 never">never</span>
+        <p class="why">
+          A legally qualified digital signature needs a certificate authority, a trusted timestamp and
+          an audit trail — all of which are, by design, third parties. <a href="../sign-pdf/">Sign PDF</a>
+          places a picture of your signature, which is what most everyday paperwork asks for, and it
+          says so plainly rather than implying more.
+        </p>
+      </div>
+      <div class="rowitem">
+        <span class="nm">Cracking a password you do not have</span><span class="tag2 never">never</span>
+        <p class="why">
+          Removing a password you know is a planned feature. Guessing one you do not is not a technical
+          limitation — it is simply not something this project is willing to be.
+        </p>
+      </div>
+      <div class="rowitem">
+        <span class="nm">Accounts, cloud storage, sync</span><span class="tag2 never">never</span>
+        <p class="why">
+          Storing your files would require exactly the server this site does not have. There is nothing
+          to log in to, and nothing to delete afterwards.
+        </p>
+      </div>
+    </div>
+
+    <h2>How to read this page</h2>
+    <p>
+      Roughly two thirds of what a full-featured PDF service offers can be done properly inside a
+      browser. The third that cannot is almost entirely office-format conversion and AI — and every
+      item in it fails for the same single reason.
+    </p>
+    <p>
+      That is the trade Kagaz makes. Fewer tools, and none of them ever see your document.
+    </p>
+
+  </section>
+
+  <section class="who">
+    <h2>Want something moved up the list?</h2>
+    <p>
+      Open an issue and say what you were trying to do — the reason behind a request is usually more
+      useful than the request. If you would rather build it, everything in the middle section is
+      scoped and waiting.
+    </p>
+    <div class="links">
+      <a href="https://github.com/namastevis/kagaz/issues">Open an issue</a>
+      <a href="../contribute/">How to contribute</a>
+      <a href="../">All tools</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../contribute/">Contribute</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+<script src="../shared/kagaz.js"></script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crop PDF margins without uploading — Kagaz</title>
+<meta name="description" content="Trim the white margins off PDF pages in your browser, with a live preview. Nothing is uploaded. Free and open source.">
+<link rel="canonical" href="https://kagaz.namastevis.in/crop-pdf/">
+<meta property="og:title" content="Crop PDF margins without uploading — Kagaz">
+<meta property="og:description" content="Trim white margins with a live preview, entirely in your browser.">
+<meta property="og:url" content="https://kagaz.namastevis.in/crop-pdf/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/kagaz.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+{"@type":"Question","name":"Is my PDF uploaded to crop it?","acceptedAnswer":{"@type":"Answer","text":"No. Cropping happens in your browser. Kagaz has no server."}},
+{"@type":"Question","name":"Does cropping delete the content outside the crop?","acceptedAnswer":{"@type":"Answer","text":"No. Cropping changes the visible area of the page. The content outside it is still inside the file and can be recovered by widening the crop again, so do not use cropping to hide sensitive information."}},
+{"@type":"Question","name":"Why crop a PDF at all?","acceptedAnswer":{"@type":"Answer","text":"Usually to remove wide white margins so the text fills the screen of an e-reader or tablet, or to trim the black edges a scanner leaves around a page."}}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <a class="brand" href="../"><span class="dev">कागज़</span><span class="lat">Kagaz</span><small>paper tools</small></a>
+    <nav>
+      <a href="../">All tools</a>
+      <a href="../roadmap/">Roadmap</a>
+      <a href="../contribute/">Contribute</a>
+      <a href="https://namastevis.in/">namastevis.in</a>
+    </nav>
+  </header>
+
+  <p class="eyebrow">Crop · nothing uploaded</p>
+  <h1>Crop PDF</h1>
+  <p class="lede">
+    Trim wide margins so the text fills a tablet or e-reader screen, or cut off the dark edge a
+    scanner left behind. <b>Live preview, and nothing leaves this tab.</b>
+  </p>
+
+  <section class="panel" id="panelFile">
+    <div class="head"><span class="step">1</span><h2>Your PDF</h2><span class="note" id="fileNote">no file yet</span></div>
+    <div class="body">
+      <div class="drop" id="drop">
+        <span class="big">Drop a PDF here</span>
+        <span class="small">or tap to choose · one file at a time</span>
+      </div>
+      <div id="fileMsg"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="panelOpts" hidden>
+    <div class="head"><span class="step">2</span><h2>How much to trim</h2><span class="note" id="planNote"></span></div>
+    <div class="body stack">
+      <div class="row">
+        <div>
+          <label class="fld" for="mTop">Top — <span id="tVal">0</span>%</label>
+          <input type="range" id="mTop" min="0" max="45" value="0" step="1">
+        </div>
+        <div>
+          <label class="fld" for="mBottom">Bottom — <span id="bVal">0</span>%</label>
+          <input type="range" id="mBottom" min="0" max="45" value="0" step="1">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label class="fld" for="mLeft">Left — <span id="lVal">0</span>%</label>
+          <input type="range" id="mLeft" min="0" max="45" value="0" step="1">
+        </div>
+        <div>
+          <label class="fld" for="mRight">Right — <span id="rVal">0</span>%</label>
+          <input type="range" id="mRight" min="0" max="45" value="0" step="1">
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn ghost" id="even" type="button">Same on all sides</button>
+        <button class="btn ghost" id="reset" type="button">Reset</button>
+      </div>
+
+      <div>
+        <label class="fld" for="ranges">Pages</label>
+        <input type="text" id="ranges" value="all" spellcheck="false" placeholder="all, or 1-3">
+      </div>
+
+      <div>
+        <span class="fldlabel">Preview — the shaded band is what disappears</span>
+        <div class="pagegrid" id="grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="bar">
+    <span class="count" id="count">Add a PDF</span>
+    <button class="btn ghost" id="clear" disabled>Clear</button>
+    <button class="btn primary" id="go" disabled>Crop and download</button>
+  </div>
+  <div class="prog" id="prog"></div>
+  <div id="msg"></div>
+
+  <div class="afterglow" id="afterglow" hidden>
+    <p>
+      Cropped on your own machine — nothing was uploaded. Kagaz is free and open source,
+      made by <b>Amit Jena</b> in India.
+    </p>
+    <div class="links">
+      <a href="https://namastevis.in/">See my other work</a>
+      <a href="../contribute/">Buy me a chai</a>
+      <a href="https://github.com/namastevis/kagaz">Star it on GitHub</a>
+      <a href="../">More Kagaz tools</a>
+    </div>
+  </div>
+
+  <section class="prose">
+    <h2>Cropping hides, it does not delete</h2>
+    <p>
+      This is the one thing worth understanding. A PDF page has a visible area — the crop box —
+      and changing it is like putting a mask over the page. Everything outside the mask is
+      <b>still inside the file</b>, and anyone can bring it back by widening the crop.
+    </p>
+    <p>
+      So cropping is perfect for tidying margins and useless for hiding anything. If there is
+      something on the page that must not be seen, use <a href="../redact-pdf/">Redact PDF</a>,
+      which removes the underlying content for real.
+    </p>
+
+    <h2>Why margins are set as percentages</h2>
+    <p>
+      Because a document can mix page sizes, and "trim 20 mm" means something different on A5
+      and A3. A percentage of each page's own width does the sensible thing everywhere.
+    </p>
+
+    <h2>Common questions</h2>
+    <h3>Is my file uploaded?</h3>
+    <p>No. The preview is rendered in your browser and so is the cropped file. There is no server.</p>
+    <h3>Will the text get smaller?</h3>
+    <p>
+      No. Cropping does not scale anything. The page becomes smaller, so when a reader fits it to
+      your screen the text ends up looking larger — which is usually the point.
+    </p>
+    <h3>Can I crop each page differently?</h3>
+    <p>One crop is applied to every selected page. Per-page cropping is a <a href="../contribute/">good first issue</a>.</p>
+
+    <h2>Other Kagaz tools</h2>
+    <ul>
+      <li><a href="../redact-pdf/">Redact PDF</a> — remove content permanently</li>
+      <li><a href="../rotate-pdf/">Rotate PDF</a> — turn pages the right way up</li>
+      <li><a href="../organize-pdf/">Organize PDF</a> — reorder and remove pages</li>
+      <li><a href="../compress-pdf/">Compress PDF</a> — shrink the file</li>
+    </ul>
+  </section>
+
+  <footer class="foot">
+    <div class="r">
+      <span>Made with ❤️ in India</span> <span class="dot">·</span>
+      <a href="../LICENSE">MIT</a> <span class="dot">·</span>
+      <a href="https://github.com/namastevis/kagaz">Source</a> <span class="dot">·</span>
+      <a href="../roadmap/">Roadmap</a> <span class="dot">·</span>
+      <a href="https://namastevis.in/">Amit Jena</a>
+    </div>
+    <div class="r">© <span data-year>2026</span> · no cookies, no analytics, no upload</div>
+  </footer>
+
+</div>
+
+<script src="../vendor/pdf-lib.min.js"></script>
+<script src="../vendor/pdf.min.js"></script>
+<script src="../shared/ops.js"></script>
+<script src="../shared/kagaz.js"></script>
+<script>
+(function () {
+  'use strict';
+  var K = window.Kagaz, ops = window.KagazOps;
+  var current = null, thumbs = null;
+
+  var grid = K.$('#grid'), noteEl = K.$('#fileNote'), planNote = K.$('#planNote');
+  var countEl = K.$('#count'), goBtn = K.$('#go'), clearBtn = K.$('#clear');
+  var progEl = K.$('#prog'), msgEl = K.$('#msg'), fileMsgEl = K.$('#fileMsg');
+  var optsPanel = K.$('#panelOpts');
+
+  var SIDES = [['#mTop', '#tVal'], ['#mBottom', '#bVal'], ['#mLeft', '#lVal'], ['#mRight', '#rVal']];
+
+  K.dropzone(K.$('#drop'), { accept: '.pdf,application/pdf', match: K.isPdf, onFiles: function (f) { open(f[0]); } });
+
+  async function open(file) {
+    K.say(fileMsgEl, 'info', 'Reading “' + file.name + '”…');
+    var bar = K.progress(progEl);
+    try {
+      var bytes = await K.read(file);
+      var info = await ops.describe(bytes, file.name);
+      current = { name: file.name, bytes: bytes, pages: info.pages };
+      if (thumbs) thumbs.release();
+      thumbs = await K.thumbnails(bytes, { maxEdge: 190, onProgress: function (f) { bar.set(f); } });
+      K.say(fileMsgEl, '', null);
+    } catch (err) {
+      current = null;
+      K.say(fileMsgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+    }
+    render();
+  }
+
+  SIDES.forEach(function (pair) {
+    K.$(pair[0]).addEventListener('input', function () { K.$(pair[1]).textContent = this.value; render(); });
+  });
+  K.$('#ranges').addEventListener('input', render);
+
+  K.$('#even').addEventListener('click', function () {
+    var v = Math.max.apply(null, SIDES.map(function (p) { return parseInt(K.$(p[0]).value, 10); })) || 5;
+    SIDES.forEach(function (p) { K.$(p[0]).value = v; K.$(p[1]).textContent = v; });
+    render();
+  });
+  K.$('#reset').addEventListener('click', function () {
+    SIDES.forEach(function (p) { K.$(p[0]).value = 0; K.$(p[1]).textContent = '0'; });
+    render();
+  });
+
+  function margins() {
+    return {
+      top: parseInt(K.$('#mTop').value, 10) / 100,
+      bottom: parseInt(K.$('#mBottom').value, 10) / 100,
+      left: parseInt(K.$('#mLeft').value, 10) / 100,
+      right: parseInt(K.$('#mRight').value, 10) / 100
+    };
+  }
+
+  function selection() {
+    if (!current) return [];
+    return ops.parseRanges(K.$('#ranges').value, current.pages).indices;
+  }
+
+  function render() {
+    grid.innerHTML = '';
+    if (!current) {
+      noteEl.textContent = 'no file yet';
+      countEl.textContent = 'Add a PDF';
+      optsPanel.hidden = true;
+      clearBtn.disabled = goBtn.disabled = true;
+      return;
+    }
+
+    var m = margins();
+    var any = m.top || m.bottom || m.left || m.right;
+    var sel = selection();
+    var selSet = {};
+    sel.forEach(function (i) { selSet[i] = true; });
+
+    thumbs.slice(0, 12).forEach(function (t) {
+      var on = !!selSet[t.index];
+      var card = K.el('div', { class: 'pagecard' + (on ? ' sel' : '') });
+      card.appendChild(K.el('span', { class: 'badge', text: String(t.index + 1) }));
+
+      var shot = K.el('div', { class: 'shot', style: 'position:relative' });
+      shot.appendChild(K.el('img', { src: t.url, alt: 'Page ' + (t.index + 1), loading: 'lazy' }));
+      if (on && any) {
+        // Shade the band that will be cut away.
+        shot.appendChild(K.el('span', {
+          style: 'position:absolute; inset:0; pointer-events:none; ' +
+            'box-shadow: inset 0 ' + (m.top * 100) + '% 0 rgba(210,59,54,.35),' +
+            ' inset 0 -' + (m.bottom * 100) + '% 0 rgba(210,59,54,.35),' +
+            ' inset ' + (m.left * 100) + '% 0 0 rgba(210,59,54,.35),' +
+            ' inset -' + (m.right * 100) + '% 0 0 rgba(210,59,54,.35);'
+        }));
+      }
+      card.appendChild(shot);
+      card.appendChild(K.el('div', { class: 'no', text: on && any ? 'cropped' : 'unchanged' }));
+      grid.appendChild(card);
+    });
+
+    if (thumbs.length > 12) {
+      grid.appendChild(K.el('div', { class: 'pagecard', html: '<div class="no" style="padding:22px 4px">+' + (thumbs.length - 12) + ' more</div>' }));
+    }
+
+    var keptW = Math.round((1 - m.left - m.right) * 100);
+    var keptH = Math.round((1 - m.top - m.bottom) * 100);
+    noteEl.textContent = current.pages + ' pages · ' + K.bytes(current.bytes.length);
+    planNote.textContent = any ? keptW + '% × ' + keptH + '% of each page kept' : 'nothing trimmed yet';
+    countEl.innerHTML = '<b>' + sel.length + '</b> page' + (sel.length === 1 ? '' : 's') + ' · ' + (any ? keptW + '% × ' + keptH + '% kept' : 'no crop set');
+    optsPanel.hidden = false;
+    clearBtn.disabled = false;
+    goBtn.disabled = !any || !sel.length;
+
+    K.$('#panelFile').classList.add('done');
+    if (!sel.length) K.say(msgEl, 'warn', 'That page selection is empty.');
+    else if (!any) K.say(msgEl, 'info', 'Move a slider to trim an edge.');
+    else K.say(msgEl, '', null);
+  }
+
+  clearBtn.addEventListener('click', function () {
+    if (thumbs) thumbs.release();
+    thumbs = null; current = null;
+    K.say(msgEl, '', null); K.say(fileMsgEl, '', null);
+    render();
+  });
+
+  goBtn.addEventListener('click', async function () {
+    if (!current) return;
+    goBtn.disabled = true; clearBtn.disabled = true;
+    var bar = K.progress(progEl);
+    K.say(msgEl, 'info', 'Cropping…');
+    try {
+      bar.set(0.4);
+      var ranges = K.$('#ranges').value;
+      var out = await ops.crop(current.bytes, {
+        margins: margins(),
+        ranges: /^all$/i.test(ranges.trim()) ? null : ranges,
+        name: current.name
+      });
+      bar.set(1);
+      K.say(msgEl, 'good', out.changed + ' page' + (out.changed === 1 ? '' : 's') + ' cropped — ' + K.bytes(out.bytes.length) + '. Remember the trimmed content is hidden, not deleted.');
+      K.download(out.bytes, current.name.replace(/\.pdf$/i, '') + '_cropped.pdf');
+    } catch (err) {
+      K.say(msgEl, 'err', K.humanError(err));
+    } finally {
+      bar.done();
+      render();
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
